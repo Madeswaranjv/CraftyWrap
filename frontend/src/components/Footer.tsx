@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -13,23 +13,51 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { InstagramLogo, WhatsAppLogo } from '@/components/SocialIcons';
-import { CATEGORIES } from '@/data/mockData';
+import { FadeInSection } from '@/components/motion/FadeInSection';
+import { apiRequest } from '@/lib/api';
+import { CatalogTheme, toCatalogTheme } from '@/lib/catalog';
 
 export const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [themes, setThemes] = useState<CatalogTheme[]>([]);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  useEffect(() => {
+    let isCurrent = true;
+    const fetchThemes = async () => {
+      try {
+        const rawThemes = await apiRequest<Omit<CatalogTheme, 'id' | 'badgeColor' | 'bgColor'>[]>('/design-themes');
+        if (isCurrent) {
+          setThemes(rawThemes.map((theme, index) => toCatalogTheme(theme, index)));
+        }
+      } catch {
+        // Fallback
+      }
+    };
+    void fetchThemes();
+    return () => { isCurrent = false; };
+  }, []);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email.trim()) {
-      setSubscribed(true);
-      setEmail('');
-      setTimeout(() => setSubscribed(false), 4000);
+      try {
+        await apiRequest('/newsletter', {
+          method: 'POST',
+          body: JSON.stringify({ email: email.trim() }),
+        });
+        setSubscribed(true);
+        setEmail('');
+        setTimeout(() => setSubscribed(false), 4000);
+      } catch {
+        // Handle error silently or set notification
+      }
     }
   };
 
   return (
-    <footer className="bg-gradient-to-b from-warmbrown-800 to-warmbrown-900 text-peach-100 pt-16 pb-8 border-t-4 border-peach-300">
+    <FadeInSection>
+      <footer className="bg-gradient-to-b from-warmbrown-800 to-warmbrown-900 text-peach-100 pt-16 pb-8 border-t-4 border-peach-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Newsletter & Highlight Strip */}
         <div className="bg-warmbrown-700/50 rounded-3xl p-6 sm:p-8 border border-warmbrown-600/40 flex flex-col lg:flex-row items-center justify-between gap-6">
@@ -128,8 +156,8 @@ export const Footer: React.FC = () => {
               Collections
             </h4>
             <ul className="space-y-2 text-xs text-peach-200/80 font-medium">
-              {CATEGORIES.map((cat) => (
-                <li key={cat.id}>
+              {themes.map((cat) => (
+                <li key={cat._id || cat.id}>
                   <Link
                     href={`/collections?category=${encodeURIComponent(cat.name)}`}
                     className="hover:text-peach-300 transition-colors flex items-center gap-1.5"
@@ -226,5 +254,6 @@ export const Footer: React.FC = () => {
         </div>
       </div>
     </footer>
+    </FadeInSection>
   );
 };

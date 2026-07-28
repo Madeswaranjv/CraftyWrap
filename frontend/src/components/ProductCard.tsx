@@ -2,18 +2,27 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Product } from '@/data/mockData';
 import { useCart } from '@/context/CartContext';
+import { CatalogProduct } from '@/lib/catalog';
 import { StarRating } from './StarRating';
+import { YarnSpinner } from './motion/YarnSpinner';
 import { Heart, ShoppingBag, Clock } from 'lucide-react';
 
 interface ProductCardProps {
-  product: Product;
+  product: CatalogProduct;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addToCart } = useCart();
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { addToCart, wishlist, toggleWishlist } = useCart();
+  const targetId = product.databaseId || product.id;
+  const isWishlisted = wishlist.includes(targetId);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddToCart = () => {
+    setIsAdding(true);
+    void addToCart(product);
+    setTimeout(() => setIsAdding(false), 450);
+  };
 
   const renderIcon = (name: string) => {
     switch (name) {
@@ -29,6 +38,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       case 'Rose': return '🌹';
       case 'Dragon': return '🐲';
       case 'Bunny': return '🐰';
+      case 'Bee': return '🐝';
+      case 'Octopus': return '🐙';
+      case 'ToteBag': return '👜';
+      case 'DoorScreen': return '🚪';
+      case 'Cherry': return '🍒';
+      case 'Frog': return '🐸';
+      case 'Cactus': return '🌵';
+      case 'Butterfly': return '🦋';
+      case 'BearCap': return '🧢';
+      case 'Bouquet': return '💐';
+      case 'Ladybug': return '🐞';
+      case 'Lemon': return '🍋';
+      case 'Tulip': return '🌷';
+      case 'Mushroom': return '🍄';
       default: return '🧶';
     }
   };
@@ -58,7 +81,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <button
           onClick={(e) => {
             e.preventDefault();
-            setIsWishlisted(!isWishlisted);
+            void toggleWishlist(targetId);
           }}
           className={`pointer-events-auto w-9 h-9 rounded-full flex items-center justify-center transition-all ${
             isWishlisted
@@ -96,7 +119,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-warmbrown-500 font-medium">
-            <span>{product.category}</span>
+            <span>{product.productType ? `${product.productType} • ${product.designTheme}` : product.category}</span>
             <span className="flex items-center gap-1 text-[11px] text-warmbrown-600">
               <Clock size={11} /> {product.prepTimeDays}d prep
             </span>
@@ -130,11 +153,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
 
           <button
-            onClick={() => addToCart(product)}
-            className="bg-peach-100 hover:bg-warmbrown-800 text-warmbrown-800 hover:text-white px-3.5 py-2 rounded-full font-bold text-xs transition-all duration-200 flex items-center gap-1.5 shadow-xs border border-peach-200/80"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            className="bg-peach-100 hover:bg-warmbrown-800 text-warmbrown-800 hover:text-white px-3.5 py-2 rounded-full font-bold text-xs transition-all duration-200 flex items-center gap-1.5 shadow-xs border border-peach-200/80 disabled:opacity-75"
           >
-            <ShoppingBag size={14} />
-            <span>Add</span>
+            {isAdding ? (
+              <YarnSpinner size={14} />
+            ) : (
+              <ShoppingBag size={14} />
+            )}
+            <span>{isAdding ? 'Adding' : 'Add'}</span>
           </button>
         </div>
       </div>

@@ -1,73 +1,195 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { CATEGORIES, PRODUCTS, FAQS } from '@/data/mockData';
+import { motion } from 'framer-motion';
+import { FAQS } from '@/data/mockData';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryTile } from '@/components/CategoryTile';
 import { InstagramLogo, WhatsAppLogo } from '@/components/SocialIcons';
+import { FadeInSection } from '@/components/motion/FadeInSection';
+import { StaggeredGrid } from '@/components/motion/StaggeredGrid';
+import { HeroIntroAnimation } from '@/components/motion/HeroIntroAnimation';
+import {
+  heroSpringContainerVariants,
+  heroSpringItemVariants,
+  floatingYarnVariants,
+} from '@/lib/motion';
+import { apiRequest } from '@/lib/api';
+import { CatalogProduct, CatalogTheme, toCatalogProduct, toCatalogTheme } from '@/lib/catalog';
 import {
   Wand2,
   ArrowRight,
   Heart,
-  ShieldCheck,
   Package,
   MessageCircle,
-  Instagram,
   ChevronDown,
   Star,
-  Zap,
+  Sparkles,
+  RotateCcw,
 } from 'lucide-react';
+
+declare global {
+  interface Window {
+    __crafty_has_visited_app?: boolean;
+  }
+}
+
+type IntroState = 'loading' | 'replay';
+
+const SERVER_RESPONSE_TIMEOUT_MS = 15_000;
+const INTRO_DURATION_MS = 2_000;
 
 export default function HomePage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const featuredProducts = PRODUCTS.slice(0, 4);
-  const bestSellers = PRODUCTS.filter((p) => p.isBestSeller).slice(0, 4);
+  const [showIntro, setShowIntro] = useState(true);
+  const [introKey, setIntroKey] = useState(0);
+  const [introState, setIntroState] = useState<IntroState>('loading');
+  const [featuredProducts, setFeaturedProducts] = useState<CatalogProduct[]>([]);
+  const [bestSellers, setBestSellers] = useState<CatalogProduct[]>([]);
+  const [categories, setCategories] = useState<CatalogTheme[]>([]);
+
+  useEffect(() => {
+    // Only the first visit gets the two-second intro; later SPA visits show the page immediately.
+    if (window.__crafty_has_visited_app) {
+      setShowIntro(false);
+      return;
+    }
+
+    window.__crafty_has_visited_app = true;
+    const introTimer = window.setTimeout(() => setShowIntro(false), INTRO_DURATION_MS);
+    return () => window.clearTimeout(introTimer);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let isCurrent = true;
+    const timeoutId = window.setTimeout(() => controller.abort(), SERVER_RESPONSE_TIMEOUT_MS);
+
+    const loadHomeData = async () => {
+      try {
+        const [productsRes, bestSellersRes, themesRes] = await Promise.all([
+          apiRequest<{ products: CatalogProduct[] }>('/products?limit=8', { signal: controller.signal }),
+          apiRequest<{ products: CatalogProduct[] }>('/products?bestSeller=true&limit=4', { signal: controller.signal }),
+          apiRequest<Omit<CatalogTheme, 'id' | 'badgeColor' | 'bgColor'>[]>('/design-themes', { signal: controller.signal }),
+        ]);
+        if (!isCurrent) return;
+        setFeaturedProducts(productsRes.products.map(toCatalogProduct).slice(0, 4));
+        setBestSellers(bestSellersRes.products.map(toCatalogProduct));
+        setCategories(themesRes.map((theme, index) => toCatalogTheme(theme, index)));
+      } catch {
+        if (!isCurrent) return;
+        // The page itself stays available after the intro even when catalog data is delayed.
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    };
+    void loadHomeData();
+
+    return () => {
+      isCurrent = false;
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showIntro || introState !== 'replay') return;
+    const replayTimer = window.setTimeout(() => setShowIntro(false), 1_600);
+    return () => window.clearTimeout(replayTimer);
+  }, [introKey, introState, showIntro]);
+
+  const replayIntro = () => {
+    setShowIntro(true);
+    setIntroState('replay');
+    setIntroKey((prev) => prev + 1);
+  };
 
   return (
     <div className="space-y-16 pb-12">
-      {/* 1. HERO BANNER SECTION (Peach Tint Banner matching reference site's hero layout) */}
-      <section className="relative bg-gradient-to-b from-peach-100/90 via-peach-50/60 to-white pt-8 pb-16 px-4 sm:px-6 lg:px-8 border-b border-peach-200/50">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Left Hero Text Content */}
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 bg-white/90 border border-peach-300 text-warmbrown-800 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xs animate-bounce-short">
-              <Heart size={14} className="text-peach-600 fill-peach-400" />
-              <span>100% Hand-Crocheted Artisan Dolls</span>
-            </div>
+      {/* Dynamic Intro Curtain on Page Mount & Refresh */}
+      <HeroIntroAnimation
+        key={introKey}
+        isOpen={showIntro}
+        state={introState}
+      />
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-warmbrown-800 leading-[1.15] tracking-tight">
+      {/* 1. HERO BANNER SECTION WITH CHOREOGRAPHED INTRO ANIMATION */}
+      <section className="relative bg-gradient-to-b from-peach-100/90 via-peach-50/60 to-white pt-8 pb-16 px-4 sm:px-6 lg:px-8 border-b border-peach-200/50 overflow-hidden">
+        {/* Ambient Decorative Background Circles */}
+        <div className="absolute top-10 left-1/4 w-72 h-72 bg-peach-300/20 rounded-full blur-3xl pointer-events-none animate-pulse-soft" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-200/20 rounded-full blur-3xl pointer-events-none animate-pulse-soft" style={{ animationDelay: '1.5s' }} />
+
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+          {/* Left Hero Content */}
+          <motion.div
+            key={`hero-left-${introKey}`}
+            initial="hidden"
+            animate="visible"
+            variants={heroSpringContainerVariants}
+            className="lg:col-span-7 space-y-6 text-center lg:text-left"
+          >
+            {/* Tagline Badge & Replay Button */}
+            <motion.div variants={heroSpringItemVariants} className="flex flex-wrap items-center justify-center lg:justify-start gap-2">
+              <div className="inline-flex items-center gap-2 bg-white/90 border border-peach-300 text-warmbrown-800 px-4 py-1.5 rounded-full text-xs font-extrabold shadow-sm backdrop-blur-md">
+                <Heart size={14} className="text-peach-600 fill-peach-400 animate-bounce" />
+                <span>100% Hand-Crocheted Artisan Dolls</span>
+              </div>
+              <button
+                onClick={replayIntro}
+                className="inline-flex items-center gap-1 bg-peach-200/70 hover:bg-peach-300 text-warmbrown-700 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border border-peach-300/80 hover:scale-105 active:scale-95 shadow-xs"
+                title="Replay intro animation"
+              >
+                <RotateCcw size={12} />
+                <span>Replay Intro</span>
+              </button>
+            </motion.div>
+
+            {/* Main Headline */}
+            <motion.h1
+              variants={heroSpringItemVariants}
+              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-warmbrown-800 leading-[1.15] tracking-tight"
+            >
               Handcrafted Yarn Dolls <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-warmbrown-600 to-peach-600">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-warmbrown-600 via-peach-600 to-amber-600">
                 Crafted to Bring Smiles.
               </span>
-            </h1>
+            </motion.h1>
 
-            <p className="text-base sm:text-lg text-warmbrown-700/80 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+            {/* Description Body */}
+            <motion.p
+              variants={heroSpringItemVariants}
+              className="text-base sm:text-lg text-warmbrown-700/80 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal"
+            >
               Every CraftyWrap doll is individually hand-stitched with ultra-soft velvet and organic bamboo yarn. From tiny pocket fruits to giant huggable critters, unwrap endless joy today.
-            </p>
+            </motion.p>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
+            {/* CTA Buttons */}
+            <motion.div
+              variants={heroSpringItemVariants}
+              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2"
+            >
               <Link
                 href="/collections"
-                className="w-full sm:w-auto bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50 px-7 py-3.5 rounded-full font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="w-full sm:w-auto bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50 px-7 py-3.5 rounded-full font-bold text-sm shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 group"
               >
                 <span>Shop All Collections</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
                 href="/custom-order"
-                className="w-full sm:w-auto bg-peach-200 hover:bg-peach-300 text-warmbrown-900 border border-peach-300 px-7 py-3.5 rounded-full font-bold text-sm transition-all flex items-center justify-center gap-2"
+                className="w-full sm:w-auto bg-peach-200/80 hover:bg-peach-300 text-warmbrown-900 border border-peach-300 px-7 py-3.5 rounded-full font-bold text-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
               >
                 <Wand2 size={16} className="text-warmbrown-700" />
                 <span>Request Custom Doll</span>
               </Link>
-            </div>
+            </motion.div>
 
             {/* Trust Metrics */}
-            <div className="pt-4 flex items-center justify-center lg:justify-start gap-6 text-xs text-warmbrown-700 font-semibold border-t border-peach-200/60 max-w-lg">
+            <motion.div
+              variants={heroSpringItemVariants}
+              className="pt-4 flex items-center justify-center lg:justify-start gap-6 text-xs text-warmbrown-700 font-semibold border-t border-peach-200/60 max-w-lg"
+            >
               <div className="flex items-center gap-1.5">
                 <Star size={14} className="fill-amber-400 text-amber-400" />
                 <span>4.9 Star Rating (500+ Reviews)</span>
@@ -76,16 +198,52 @@ export default function HomePage() {
                 <Heart size={14} className="fill-rose-400 text-rose-400" />
                 <span>Made by Hand</span>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          {/* Right Hero Visual Showcase */}
-          <div className="lg:col-span-5 relative flex items-center justify-center">
+          {/* Right Hero Visual Showcase with Floating Orbit Badges & 3D Interactive Feel */}
+          <motion.div
+            key={`hero-right-${introKey}`}
+            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 100, damping: 15, delay: 0.2 }}
+            className="lg:col-span-5 relative flex items-center justify-center pt-6 lg:pt-0"
+          >
+            {/* Background Pulsing Aura */}
             <div className="w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-gradient-to-tr from-peach-300/40 via-peach-200/30 to-amber-100/50 absolute animate-pulse-soft" />
 
-            <div className="relative z-10 bg-white p-4 sm:p-6 rounded-3xl border border-peach-200 shadow-card max-w-sm w-full space-y-4">
+            {/* Floating Orbit Badges */}
+            <motion.div
+              custom={0}
+              variants={floatingYarnVariants}
+              initial="initial"
+              animate="animate"
+              className="absolute -top-4 left-4 z-20 bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-peach-300 shadow-md text-xs font-extrabold text-warmbrown-800 flex items-center gap-1.5"
+            >
+              <span className="text-base">🧶</span> Velvet Chenille
+            </motion.div>
+
+            <motion.div
+              custom={1}
+              variants={floatingYarnVariants}
+              initial="initial"
+              animate="animate"
+              className="absolute bottom-2 -right-2 z-20 bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-amber-300 shadow-md text-xs font-extrabold text-warmbrown-800 flex items-center gap-1.5"
+            >
+              <Sparkles size={14} className="text-amber-500 animate-sparkle" /> 100% Stitched by Hand
+            </motion.div>
+
+            {/* Main Featured Doll Card */}
+            <motion.div
+              whileHover={{ y: -6, rotate: 1, scale: 1.02 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="relative z-10 bg-white p-4 sm:p-6 rounded-3xl border border-peach-200 shadow-card max-w-sm w-full space-y-4 cursor-pointer group"
+            >
               <div className="relative w-full aspect-square rounded-2xl bg-gradient-to-br from-amber-100 via-peach-100 to-rose-100 flex items-center justify-center overflow-hidden">
-                <div className="text-8xl animate-float">🐱</div>
+                <div className="text-8xl animate-float group-hover:scale-110 transition-transform duration-300">🐱</div>
+                <div className="absolute top-3 right-3 bg-warmbrown-800 text-peach-100 px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase shadow-xs">
+                  Artisan Pick
+                </div>
                 <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-warmbrown-800 shadow-xs flex items-center gap-1">
                   <Heart size={12} className="text-peach-600 fill-peach-400" /> Whiskers Calico Kitten
                 </div>
@@ -98,18 +256,19 @@ export default function HomePage() {
                 </div>
                 <Link
                   href="/products/crafty-cat-whiskers"
-                  className="bg-warmbrown-800 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-warmbrown-900 transition-colors"
+                  className="bg-warmbrown-800 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-warmbrown-900 group-hover:bg-peach-600 transition-colors flex items-center gap-1"
                 >
-                  View Doll &rarr;
+                  <span>View Doll</span>
+                  <span>&rarr;</span>
                 </Link>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
-      {/* 2. SHOP BY COLLECTION TYPE (Grid matching reference category tiles) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      {/* 2. SHOP BY COLLECTION TYPE */}
+      <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2 border-b border-peach-100 pb-4">
           <div>
             <span className="text-xs font-bold text-warmbrown-500 uppercase tracking-widest">
@@ -123,19 +282,19 @@ export default function HomePage() {
             href="/collections"
             className="text-xs font-bold text-warmbrown-600 hover:text-warmbrown-800 flex items-center gap-1 hover:underline"
           >
-            See All 6 Categories &rarr;
+            See All Categories &rarr;
           </Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {CATEGORIES.map((cat) => (
-            <CategoryTile key={cat.id} category={cat} />
+          {categories.map((cat) => (
+            <CategoryTile key={cat._id || cat.id} category={cat} />
           ))}
         </div>
-      </section>
+      </FadeInSection>
 
-      {/* 3. TODAY'S PICKS / FEATURED DOLLS (Horizontal 4-col product grid) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      {/* 3. TODAY'S PICKS / FEATURED DOLLS WITH STAGGERED REVEAL */}
+      <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex items-center justify-between border-b border-peach-100 pb-4">
           <div>
             <span className="text-xs font-bold text-warmbrown-500 uppercase tracking-widest">
@@ -153,15 +312,15 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StaggeredGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {featuredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
-        </div>
-      </section>
+        </StaggeredGrid>
+      </FadeInSection>
 
-      {/* 4. SHOP BY YARN TYPE & DOLL SIZE (Filter shortcut tiles) */}
-      <section className="bg-peach-50/70 py-12 px-4 sm:px-6 lg:px-8 border-y border-peach-100">
+      {/* 4. SHOP BY YARN TYPE & DOLL SIZE */}
+      <FadeInSection className="bg-peach-50/70 py-12 px-4 sm:px-6 lg:px-8 border-y border-peach-100">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold text-warmbrown-500 uppercase tracking-widest">
@@ -198,10 +357,10 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </FadeInSection>
 
       {/* 5. BEST-SELLING DOLLS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex items-center justify-between border-b border-peach-100 pb-4">
           <div>
             <span className="text-xs font-bold text-warmbrown-500 uppercase tracking-widest">
@@ -219,15 +378,15 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StaggeredGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {bestSellers.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
-        </div>
-      </section>
+        </StaggeredGrid>
+      </FadeInSection>
 
       {/* 6. CUSTOM ORDER CALLOUT BANNER */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-r from-warmbrown-800 via-warmbrown-700 to-warmbrown-900 rounded-3xl p-8 sm:p-12 text-peach-50 relative overflow-hidden shadow-xl border border-warmbrown-600">
           <div className="absolute right-0 top-0 w-96 h-96 bg-peach-300/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -283,10 +442,10 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </FadeInSection>
 
-      {/* 7. TRUST & SERVICES STRIP (3 short blocks matching reference site's services strip layout) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 7. TRUST & SERVICES STRIP */}
+      <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-3xl border border-peach-200/80 shadow-soft flex items-start gap-4">
             <div className="w-12 h-12 rounded-2xl bg-peach-100 text-warmbrown-700 flex items-center justify-center shrink-0">
@@ -324,10 +483,10 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </FadeInSection>
 
       {/* 8. FAQ PREVIEW SECTION */}
-      <section id="faq" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <FadeInSection id="faq" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="text-center space-y-2">
           <span className="text-xs font-bold text-warmbrown-500 uppercase tracking-widest">
             Got Questions?
@@ -363,7 +522,7 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-      </section>
+      </FadeInSection>
     </div>
   );
 }

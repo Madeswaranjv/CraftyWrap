@@ -3,6 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { InstagramLogo, WhatsAppLogo } from '@/components/SocialIcons';
+import { apiRequest, getStoredAccessToken } from '@/lib/api';
 import {
   Wand2,
   Upload,
@@ -25,21 +26,50 @@ function CustomOrderContent() {
   );
   const [yarnPreference, setYarnPreference] = useState('Velvet Chenille');
   const [budget, setBudget] = useState('$30 - $50');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setImagePreview(url);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && (email || phone) && description) {
+    setSubmitError(null);
+    if (!name || (!email && !phone) || !description) return;
+
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.set('name', name.trim());
+      formData.set('contactInfo', email.trim() || phone.trim());
+      if (email.trim()) formData.set('email', email.trim());
+      if (phone.trim()) formData.set('phone', phone.trim());
+      formData.set('yarnPreference', yarnPreference);
+      formData.set('budget', budget);
+      formData.set('description', description.trim());
+      if (refDoll) formData.set('referenceDollName', refDoll);
+      if (selectedFile) formData.set('referenceImage', selectedFile);
+
+      await apiRequest('/custom-orders', {
+        method: 'POST',
+        token: getStoredAccessToken(),
+        body: formData,
+      });
+
       setSubmitted(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit custom order request.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

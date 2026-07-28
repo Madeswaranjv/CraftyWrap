@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { apiRequest } from '@/lib/api';
 import {
   Trash2,
   Gift,
@@ -23,24 +24,35 @@ export default function CartPage() {
     setGiftWrap,
     giftNote,
     setGiftNote,
+    setPromoCode: setContextPromoCode,
   } = useCart();
   const router = useRouter();
 
-  const [promoCode, setPromoCode] = useState('');
+  const [promoCodeInput, setPromoCodeInput] = useState('');
   const [discount, setDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
 
   const giftWrapFee = giftWrap ? 4.99 : 0;
   const shippingFee = subtotal > 50 || cart.length === 0 ? 0 : 5.99;
   const total = Math.max(0, subtotal + giftWrapFee + shippingFee - discount);
 
-  const handleApplyPromo = (e: React.FormEvent) => {
+  const handleApplyPromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (promoCode.trim().toUpperCase() === 'CRAFTY10') {
-      setDiscount(subtotal * 0.1);
+    setPromoError(null);
+    if (!promoCodeInput.trim()) return;
+    try {
+      const res = await apiRequest<{ code: string; discountAmount: number }>('/promo-codes/validate', {
+        method: 'POST',
+        body: JSON.stringify({ code: promoCodeInput.trim(), subtotal }),
+      });
+      setDiscount(res.discountAmount);
       setPromoApplied(true);
-    } else if (promoCode.trim()) {
-      alert('Invalid code! Try code: CRAFTY10');
+      await setContextPromoCode(res.code);
+    } catch (error) {
+      setPromoError(error instanceof Error ? error.message : 'Invalid promo code.');
+      setPromoApplied(false);
+      setDiscount(0);
     }
   };
 
@@ -222,8 +234,8 @@ export default function CartPage() {
               <input
                 type="text"
                 placeholder="Promo Code (Try: CRAFTY10)"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
+                value={promoCodeInput}
+                onChange={(e) => setPromoCodeInput(e.target.value)}
                 className="bg-peach-50 border border-peach-200 rounded-xl px-3 py-2 text-xs w-full outline-none uppercase font-semibold"
               />
               <button
@@ -236,7 +248,12 @@ export default function CartPage() {
 
             {promoApplied && (
               <div className="text-[11px] text-emerald-700 font-bold bg-emerald-100 p-2 rounded-lg">
-                10% Crafty discount applied!
+                Promo code applied! Saved ${discount.toFixed(2)}
+              </div>
+            )}
+            {promoError && (
+              <div className="text-[11px] text-rose-700 font-bold bg-rose-100 p-2 rounded-lg">
+                {promoError}
               </div>
             )}
 

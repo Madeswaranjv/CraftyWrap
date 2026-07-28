@@ -15,17 +15,43 @@ import {
 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { loginWithGoogle, user } = useCart();
+  const { login, loginWithGoogle, user } = useCart();
   const router = useRouter();
 
-  const [email, setEmail] = useState('daniel21fisher@gmail.com');
-  const [password, setPassword] = useState('••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    loginWithGoogle();
-    router.push('/account');
+    setErrorMsg(null);
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setErrorMsg('Please enter your email address.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    try {
+      await login(trimmedEmail, password);
+      router.push('/');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Sign in failed. Please check your credentials.');
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleSocialClick = () => {
@@ -96,6 +122,19 @@ export default function LoginPage() {
               Sign in to manage custom doll orders & track shipments
             </p>
           </div>
+
+          {errorMsg && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-xs">
+              <span>{errorMsg}</span>
+              <button
+                type="button"
+                onClick={() => setErrorMsg(null)}
+                className="text-warmbrown-500 hover:text-warmbrown-800 font-bold ml-2"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             {/* Email Input Field */}

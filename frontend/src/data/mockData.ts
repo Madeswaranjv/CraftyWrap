@@ -1,7 +1,38 @@
+export type ProductType =
+  | 'Keychains'
+  | 'Towel Hanging'
+  | 'Hand Bags'
+  | 'Door Screens'
+  | 'Bag Charms'
+  | 'Dolls'
+  | 'Mats'
+  | 'Pencil Stands'
+  | 'Wall Hanging'
+  | 'Caps'
+  | 'Bouquets'
+  | 'Head Clips'
+  | 'Flower Pots'
+  | 'Coasters'
+  | 'Hair Bands'
+  | 'Pencil Toppers';
+
+export type DesignTheme =
+  | 'Vegetables'
+  | 'Fruits'
+  | 'Aquatic Animals'
+  | 'Wild Animals'
+  | 'Domestic Animals'
+  | 'Insects'
+  | 'Flowers'
+  | 'Fantasy'
+  | 'Miniatures';
+
 export interface Product {
   id: string;
   name: string;
-  category: 'Animals' | 'Vegetables' | 'Fruits' | 'Flowers' | 'Fantasy' | 'Miniatures';
+  productType: ProductType;
+  designTheme: DesignTheme;
+  category: string; // Maintain category for backward compatibility
   yarnType: 'Velvet Chenille' | 'Milk Cotton' | 'Chunky Wool' | 'Organic Bamboo';
   size: 'Mini (4")' | 'Medium (9")' | 'Giant (15")';
   price: number;
@@ -15,14 +46,14 @@ export interface Product {
   description: string;
   highlights: string[];
   careInstructions: string;
-  imageBg: string; // Tailwind color or gradient string
-  imageIconName: string; // Friendly representation
+  imageBg: string;
+  imageIconName: string;
   imageUrl?: string;
 }
 
 export interface Category {
   id: string;
-  name: 'Animals' | 'Vegetables' | 'Fruits' | 'Flowers' | 'Fantasy' | 'Miniatures';
+  name: DesignTheme;
   description: string;
   itemCount: number;
   badgeColor: string;
@@ -41,21 +72,31 @@ export interface Review {
   userPhoto?: string;
 }
 
-export const CATEGORIES: Category[] = [
-  {
-    id: 'animals',
-    name: 'Animals',
-    description: 'Lovable crocheted critters with hand-embroidered details',
-    itemCount: 14,
-    badgeColor: 'bg-amber-100 text-amber-800',
-    bgColor: 'from-amber-100/70 to-orange-50',
-    icon: '🐱',
-  },
+export const PRODUCT_TYPES: { id: string; name: ProductType; icon: string }[] = [
+  { id: 'keychains', name: 'Keychains', icon: '🔑' },
+  { id: 'towel-hanging', name: 'Towel Hanging', icon: '🧺' },
+  { id: 'hand-bags', name: 'Hand Bags', icon: '👜' },
+  { id: 'door-screens', name: 'Door Screens', icon: '🚪' },
+  { id: 'bag-charms', name: 'Bag Charms', icon: '🎒' },
+  { id: 'dolls', name: 'Dolls', icon: '🧸' },
+  { id: 'mats', name: 'Mats', icon: '🧶' },
+  { id: 'pencil-stands', name: 'Pencil Stands', icon: '✏️' },
+  { id: 'wall-hanging', name: 'Wall Hanging', icon: '🖼️' },
+  { id: 'caps', name: 'Caps', icon: '🧢' },
+  { id: 'bouquets', name: 'Bouquets', icon: '💐' },
+  { id: 'head-clips', name: 'Head Clips', icon: '🎀' },
+  { id: 'flower-pots', name: 'Flower Pots', icon: '🪴' },
+  { id: 'coasters', name: 'Coasters', icon: '☕' },
+  { id: 'hair-bands', name: 'Hair Bands', icon: '👑' },
+  { id: 'pencil-toppers', name: 'Pencil Toppers', icon: '🎨' },
+];
+
+export const DESIGN_THEMES: Category[] = [
   {
     id: 'vegetables',
     name: 'Vegetables',
     description: 'Cute garden veggies with friendly smiles and leafy tops',
-    itemCount: 9,
+    itemCount: 8,
     badgeColor: 'bg-emerald-100 text-emerald-800',
     bgColor: 'from-emerald-100/70 to-teal-50',
     icon: '🥕',
@@ -64,16 +105,52 @@ export const CATEGORIES: Category[] = [
     id: 'fruits',
     name: 'Fruits',
     description: 'Sweet plush fruits crafted in bright pastel yarn tones',
-    itemCount: 11,
+    itemCount: 10,
     badgeColor: 'bg-rose-100 text-rose-800',
     bgColor: 'from-rose-100/70 to-peach-100',
     icon: '🍓',
   },
   {
+    id: 'aquatic-animals',
+    name: 'Aquatic Animals',
+    description: 'Ocean critters, sea turtles, penguins, and whales',
+    itemCount: 7,
+    badgeColor: 'bg-sky-100 text-sky-800',
+    bgColor: 'from-sky-100/70 to-blue-50',
+    icon: '🐙',
+  },
+  {
+    id: 'wild-animals',
+    name: 'Wild Animals',
+    description: 'Forest bears, foxes, lions, and woodland creatures',
+    itemCount: 9,
+    badgeColor: 'bg-amber-100 text-amber-800',
+    bgColor: 'from-amber-100/70 to-orange-50',
+    icon: '🦊',
+  },
+  {
+    id: 'domestic-animals',
+    name: 'Domestic Animals',
+    description: 'Playful kittens, puppies, bunnies, and home pets',
+    itemCount: 8,
+    badgeColor: 'bg-orange-100 text-orange-800',
+    bgColor: 'from-orange-100/70 to-yellow-50',
+    icon: '🐱',
+  },
+  {
+    id: 'insects',
+    name: 'Insects',
+    description: 'Busy honeybees, butterflies, and cute ladybugs',
+    itemCount: 6,
+    badgeColor: 'bg-yellow-100 text-yellow-800',
+    bgColor: 'from-yellow-100/70 to-amber-50',
+    icon: '🐝',
+  },
+  {
     id: 'flowers',
     name: 'Flowers',
-    description: 'Forever-blooming knitted floral plushies and pots',
-    itemCount: 8,
+    description: 'Forever-blooming knitted floral plushies, pots, and bouquets',
+    itemCount: 9,
     badgeColor: 'bg-pink-100 text-pink-800',
     bgColor: 'from-pink-100/70 to-purple-50',
     icon: '🌸',
@@ -82,7 +159,7 @@ export const CATEGORIES: Category[] = [
     id: 'fantasy',
     name: 'Fantasy',
     description: 'Whimsical unicorns, dragons, and magical companions',
-    itemCount: 10,
+    itemCount: 8,
     badgeColor: 'bg-indigo-100 text-indigo-800',
     bgColor: 'from-purple-100/70 to-indigo-50',
     icon: '🦄',
@@ -91,18 +168,22 @@ export const CATEGORIES: Category[] = [
     id: 'miniatures',
     name: 'Miniatures',
     description: 'Pocket-sized charm buddies perfect for keychains & gifts',
-    itemCount: 16,
-    badgeColor: 'bg-sky-100 text-sky-800',
-    bgColor: 'from-sky-100/70 to-blue-50',
+    itemCount: 12,
+    badgeColor: 'bg-teal-100 text-teal-800',
+    bgColor: 'from-teal-100/70 to-cyan-50',
     icon: '🐥',
   },
 ];
+
+export const CATEGORIES = DESIGN_THEMES;
 
 export const PRODUCTS: Product[] = [
   {
     id: 'crafty-cat-whiskers',
     name: 'Whiskers the Calico Kitten',
-    category: 'Animals',
+    productType: 'Dolls',
+    designTheme: 'Domestic Animals',
+    category: 'Domestic Animals',
     yarnType: 'Velvet Chenille',
     size: 'Medium (9")',
     price: 34.99,
@@ -117,7 +198,7 @@ export const PRODUCTS: Product[] = [
       '100% Ultra-Soft Velvet Chenille Yarn',
       'Safety-locked glass eyes & soft hypoallergenic stuffing',
       'Hand-embroidered facial expression (no hard plastic edges)',
-      'Includes custom birth tag & care pouch'
+      'Includes custom birth tag & care pouch',
     ],
     careInstructions: 'Spot clean gently with cold water and mild soap. Air dry in natural shade.',
     imageBg: 'from-amber-200 via-orange-100 to-peach-100',
@@ -126,6 +207,8 @@ export const PRODUCTS: Product[] = [
   {
     id: 'carrot-carl',
     name: 'Carl the Cheerful Carrot',
+    productType: 'Dolls',
+    designTheme: 'Vegetables',
     category: 'Vegetables',
     yarnType: 'Milk Cotton',
     size: 'Medium (9")',
@@ -141,7 +224,7 @@ export const PRODUCTS: Product[] = [
       'Bright non-fading milk cotton yarn',
       'Flexible green stem leaves',
       'Stuffed with premium recycled polyester fiberfill',
-      'Ideal nursery or desk decoration'
+      'Ideal nursery or desk decoration',
     ],
     careInstructions: 'Hand wash in cool water. Reshape while damp.',
     imageBg: 'from-orange-200 via-amber-100 to-yellow-100',
@@ -150,6 +233,8 @@ export const PRODUCTS: Product[] = [
   {
     id: 'sammy-strawberry',
     name: 'Sammy the Sweet Strawberry',
+    productType: 'Bag Charms',
+    designTheme: 'Fruits',
     category: 'Fruits',
     yarnType: 'Velvet Chenille',
     size: 'Mini (4")',
@@ -165,7 +250,7 @@ export const PRODUCTS: Product[] = [
       'Pocket miniature size — fits right in your palm',
       'Hand-embroidered white seeds',
       'Optional keychain loop included upon request',
-      'Gift box included'
+      'Gift box included',
     ],
     careInstructions: 'Spot clean only.',
     imageBg: 'from-rose-200 via-pink-100 to-red-100',
@@ -174,7 +259,9 @@ export const PRODUCTS: Product[] = [
   {
     id: 'barnaby-bear',
     name: 'Barnaby Honey Bear',
-    category: 'Animals',
+    productType: 'Dolls',
+    designTheme: 'Wild Animals',
+    category: 'Wild Animals',
     yarnType: 'Chunky Wool',
     size: 'Giant (15")',
     price: 49.99,
@@ -189,7 +276,7 @@ export const PRODUCTS: Product[] = [
       'Heavy chunky yarn for substantial cuddly weight',
       'Removable knitted plaid scarf',
       'Safety jointed arms and legs',
-      'Crafted with 100% natural wool blend'
+      'Crafted with 100% natural wool blend',
     ],
     careInstructions: 'Gentle hand wash in wool detergent. Lay flat to dry.',
     imageBg: 'from-amber-300 via-orange-200 to-warmbrown-100',
@@ -198,6 +285,8 @@ export const PRODUCTS: Product[] = [
   {
     id: 'sparkle-unicorn',
     name: 'Sparkle Star Unicorn',
+    productType: 'Dolls',
+    designTheme: 'Fantasy',
     category: 'Fantasy',
     yarnType: 'Velvet Chenille',
     size: 'Medium (9")',
@@ -212,7 +301,7 @@ export const PRODUCTS: Product[] = [
       'Shimmering metallic gold horn detail',
       'Individual hand-curled rainbow mane strands',
       'Super soft plush velvet body',
-      'Perfect magical keepsake'
+      'Perfect magical keepsake',
     ],
     careInstructions: 'Spot clean gently with damp cloth.',
     imageBg: 'from-purple-200 via-pink-100 to-indigo-100',
@@ -221,6 +310,8 @@ export const PRODUCTS: Product[] = [
   {
     id: 'sunny-sunflower',
     name: 'Sunny the Pot Sunflower',
+    productType: 'Flower Pots',
+    designTheme: 'Flowers',
     category: 'Flowers',
     yarnType: 'Milk Cotton',
     size: 'Medium (9")',
@@ -235,7 +326,7 @@ export const PRODUCTS: Product[] = [
       'Weighted base so it stands upright independently',
       '12 handcrafted golden petals',
       'No watering ever needed!',
-      'Brightens any workspace or windowsill'
+      'Brightens any workspace or windowsill',
     ],
     careInstructions: 'Dust with soft dry brush.',
     imageBg: 'from-yellow-200 via-amber-100 to-orange-100',
@@ -244,6 +335,8 @@ export const PRODUCTS: Product[] = [
   {
     id: 'avocado-alex',
     name: 'Alex the Cozy Avocado',
+    productType: 'Dolls',
+    designTheme: 'Fruits',
     category: 'Fruits',
     yarnType: 'Organic Bamboo',
     size: 'Medium (9")',
@@ -257,7 +350,7 @@ export const PRODUCTS: Product[] = [
       'Eco-friendly Organic Bamboo Cotton yarn',
       'Extremely smooth skin touch texture',
       'Blush cheek embroidery',
-      'Stuffed with recycled hypoallergenic polyfill'
+      'Stuffed with recycled hypoallergenic polyfill',
     ],
     careInstructions: 'Machine washable on cold gentle cycle in laundry bag.',
     imageBg: 'from-emerald-200 via-lime-100 to-amber-100',
@@ -266,7 +359,9 @@ export const PRODUCTS: Product[] = [
   {
     id: 'pocket-penguin',
     name: 'Pippin the Pocket Penguin',
-    category: 'Miniatures',
+    productType: 'Keychains',
+    designTheme: 'Aquatic Animals',
+    category: 'Aquatic Animals',
     yarnType: 'Milk Cotton',
     size: 'Mini (4")',
     price: 16.99,
@@ -280,7 +375,7 @@ export const PRODUCTS: Product[] = [
       'Includes tiny removable beanie hat',
       'Keyring loop ready',
       'Extra sturdy tight-gauge crochet weave',
-      'Instant mood booster'
+      'Instant mood booster',
     ],
     careInstructions: 'Spot clean only.',
     imageBg: 'from-sky-200 via-blue-100 to-teal-100',
@@ -289,6 +384,8 @@ export const PRODUCTS: Product[] = [
   {
     id: 'broccie-bob',
     name: 'Broccie the Happy Broccoli',
+    productType: 'Dolls',
+    designTheme: 'Vegetables',
     category: 'Vegetables',
     yarnType: 'Velvet Chenille',
     size: 'Medium (9")',
@@ -302,7 +399,7 @@ export const PRODUCTS: Product[] = [
       'Textured floret stitches for sensory delight',
       'Soft velvet stalk handle',
       'Embroidered friendly grin',
-      'Great gift for chefs and kids'
+      'Great gift for chefs and kids',
     ],
     careInstructions: 'Spot clean gently.',
     imageBg: 'from-green-200 via-emerald-100 to-teal-100',
@@ -311,6 +408,8 @@ export const PRODUCTS: Product[] = [
   {
     id: 'daisy-rose',
     name: 'Rosie the Velvet Rose Pot',
+    productType: 'Flower Pots',
+    designTheme: 'Flowers',
     category: 'Flowers',
     yarnType: 'Velvet Chenille',
     size: 'Medium (9")',
@@ -325,7 +424,7 @@ export const PRODUCTS: Product[] = [
       'Soft deep-crimson velvet petals',
       'Hand-stitched green stem leaves',
       'Weighted base stays upright',
-      'Comes with customizable gift card tag'
+      'Comes with customizable gift card tag',
     ],
     careInstructions: 'Dust with clean dry cloth.',
     imageBg: 'from-red-200 via-rose-100 to-peach-100',
@@ -334,6 +433,8 @@ export const PRODUCTS: Product[] = [
   {
     id: 'puff-dragon',
     name: 'Puff the Baby Mint Dragon',
+    productType: 'Dolls',
+    designTheme: 'Fantasy',
     category: 'Fantasy',
     yarnType: 'Milk Cotton',
     size: 'Giant (15")',
@@ -349,7 +450,7 @@ export const PRODUCTS: Product[] = [
       'Intricate multi-part assembly with wings & tail',
       'Giant cuddle size',
       'Pastel color scheme',
-      'Collector edition CraftyWrap certificate'
+      'Collector edition CraftyWrap certificate',
     ],
     careInstructions: 'Hand wash cold with wool wash. Air dry.',
     imageBg: 'from-teal-200 via-emerald-100 to-purple-100',
@@ -358,7 +459,9 @@ export const PRODUCTS: Product[] = [
   {
     id: 'bella-bunny',
     name: 'Bella Lavender Bunny',
-    category: 'Animals',
+    productType: 'Dolls',
+    designTheme: 'Domestic Animals',
+    category: 'Domestic Animals',
     yarnType: 'Organic Bamboo',
     size: 'Medium (9")',
     price: 31.99,
@@ -372,12 +475,287 @@ export const PRODUCTS: Product[] = [
       'Floppy 7-inch long bunny ears',
       'Fabric ear lining accents',
       'Fluffy handmade yarn pom-pom tail',
-      'All-natural organic bamboo yarn'
+      'All-natural organic bamboo yarn',
     ],
     careInstructions: 'Hand wash cool, dry flat.',
     imageBg: 'from-purple-200 via-lavender-100 to-pink-100',
     imageIconName: 'Bunny',
-  }
+  },
+  {
+    id: 'buzzy-bee-keychain',
+    name: 'Buzzy Bee Crochet Keychain',
+    productType: 'Keychains',
+    designTheme: 'Insects',
+    category: 'Insects',
+    yarnType: 'Milk Cotton',
+    size: 'Mini (4")',
+    price: 14.99,
+    rating: 4.9,
+    reviewCount: 52,
+    isBestSeller: true,
+    stockCount: 18,
+    prepTimeDays: 1,
+    description: 'A charming honeybee keychain with translucent yarn wings and tiny antennas. Keeps your keys safe and sweet!',
+    highlights: ['Sturdy brass keyring loop', 'Hand-stitched stripes', 'Lightweight & durable'],
+    careInstructions: 'Spot clean with soapy damp cloth.',
+    imageBg: 'from-yellow-300 via-amber-200 to-amber-100',
+    imageIconName: 'Bee',
+  },
+  {
+    id: 'octopus-towel-hanger',
+    name: 'Ollie Octopus Towel Hanger',
+    productType: 'Towel Hanging',
+    designTheme: 'Aquatic Animals',
+    category: 'Aquatic Animals',
+    yarnType: 'Milk Cotton',
+    size: 'Medium (9")',
+    price: 28.50,
+    rating: 4.8,
+    reviewCount: 39,
+    stockCount: 10,
+    prepTimeDays: 2,
+    description: 'A practical kitchen or bathroom towel holder shaped like a friendly ocean octopus with curly tentacles.',
+    highlights: ['Includes wooden ring for towel support', '8 curly tentacles', 'Moisture-resistant yarn blend'],
+    careInstructions: 'Machine wash cool gentle cycle.',
+    imageBg: 'from-sky-200 via-blue-100 to-indigo-100',
+    imageIconName: 'Octopus',
+  },
+  {
+    id: 'daisy-tote-bag',
+    name: 'Granny Square Daisy Hand Bag',
+    productType: 'Hand Bags',
+    designTheme: 'Flowers',
+    category: 'Flowers',
+    yarnType: 'Organic Bamboo',
+    size: 'Giant (15")',
+    price: 45.00,
+    originalPrice: 52.00,
+    rating: 4.95,
+    reviewCount: 73,
+    isBestSeller: true,
+    stockCount: 5,
+    prepTimeDays: 4,
+    description: 'Handcrafted bohemian tote bag featuring 12 vintage daisy granny squares and sturdy woven straps.',
+    highlights: ['Lined interior with phone pocket', 'Soft organic bamboo cotton', 'Comfortable double shoulder straps'],
+    careInstructions: 'Hand wash cool, reshape and dry flat.',
+    imageBg: 'from-amber-100 via-peach-100 to-yellow-50',
+    imageIconName: 'ToteBag',
+  },
+  {
+    id: 'sunflower-door-screen',
+    name: 'Sunflower Garland Door Screen',
+    productType: 'Door Screens',
+    designTheme: 'Flowers',
+    category: 'Flowers',
+    yarnType: 'Milk Cotton',
+    size: 'Giant (15")',
+    price: 58.00,
+    rating: 4.9,
+    reviewCount: 28,
+    isNew: true,
+    stockCount: 4,
+    prepTimeDays: 5,
+    description: 'Decorative hanging doorway screen adorned with 9 crocheted sunflowers and cascading vine leaves.',
+    highlights: ['Includes wooden hanging rod', 'Hand-knotted macrame vine cords', 'Warm entryway decor'],
+    careInstructions: 'Gently shake or dust with clean cloth.',
+    imageBg: 'from-yellow-200 via-amber-100 to-orange-100',
+    imageIconName: 'DoorScreen',
+  },
+  {
+    id: 'cherry-bag-charm',
+    name: 'Sweet Twin Cherry Bag Charm',
+    productType: 'Bag Charms',
+    designTheme: 'Fruits',
+    category: 'Fruits',
+    yarnType: 'Velvet Chenille',
+    size: 'Mini (4")',
+    price: 16.50,
+    rating: 4.85,
+    reviewCount: 61,
+    stockCount: 14,
+    prepTimeDays: 1,
+    description: 'A pop of sweet color for your backpack or purse! Two plump red velvet cherries on a green stem with golden clip.',
+    highlights: ['Gold alloy swivel snap hook', 'Ultra-plush velvet texture', 'Great gift item'],
+    careInstructions: 'Spot clean gently.',
+    imageBg: 'from-red-200 via-rose-100 to-pink-100',
+    imageIconName: 'Cherry',
+  },
+  {
+    id: 'frog-mug-mat',
+    name: 'Frankie Frog Coffee Coaster Mat',
+    productType: 'Mats',
+    designTheme: 'Domestic Animals',
+    category: 'Domestic Animals',
+    yarnType: 'Milk Cotton',
+    size: 'Mini (4")',
+    price: 12.99,
+    rating: 4.75,
+    reviewCount: 42,
+    stockCount: 20,
+    prepTimeDays: 1,
+    description: 'A cute absorbent green frog face coaster mat to keep your desk free of coffee rings.',
+    highlights: ['Heat-resistant & highly absorbent', 'Non-slip flat weave', 'Dishwasher safe'],
+    careInstructions: 'Hand or machine wash cool.',
+    imageBg: 'from-emerald-200 via-green-100 to-lime-100',
+    imageIconName: 'Frog',
+  },
+  {
+    id: 'cactus-pencil-stand',
+    name: 'Sprout Cactus Desk Pencil Stand',
+    productType: 'Pencil Stands',
+    designTheme: 'Vegetables',
+    category: 'Vegetables',
+    yarnType: 'Milk Cotton',
+    size: 'Medium (9")',
+    price: 25.99,
+    rating: 4.9,
+    reviewCount: 48,
+    isNew: true,
+    stockCount: 7,
+    prepTimeDays: 2,
+    description: 'Organize your pens in style with this adorable crocheted Saguaro cactus holder pot!',
+    highlights: ['Holds 10+ pens and pencils', 'Sturdy reinforced inner cup', 'Decorative pink cactus flower tip'],
+    careInstructions: 'Spot clean only.',
+    imageBg: 'from-teal-200 via-emerald-100 to-green-100',
+    imageIconName: 'Cactus',
+  },
+  {
+    id: 'butterfly-wall-hanging',
+    name: 'Monarch Butterfly Wall Tapestry',
+    productType: 'Wall Hanging',
+    designTheme: 'Insects',
+    category: 'Insects',
+    yarnType: 'Organic Bamboo',
+    size: 'Medium (9")',
+    price: 36.00,
+    rating: 4.8,
+    reviewCount: 31,
+    stockCount: 6,
+    prepTimeDays: 3,
+    description: 'Vibrant orange and black monarch butterfly woven tapestry with soft tassel fringes.',
+    highlights: ['Natural driftwood hanging stick', 'Intricate wing details', 'Boho nursery decoration'],
+    careInstructions: 'Comb tassels gently with wide tooth comb.',
+    imageBg: 'from-amber-200 via-orange-100 to-peach-100',
+    imageIconName: 'Butterfly',
+  },
+  {
+    id: 'bear-beanie-cap',
+    name: 'Cozy Bear Ear Crochet Cap',
+    productType: 'Caps',
+    designTheme: 'Wild Animals',
+    category: 'Wild Animals',
+    yarnType: 'Chunky Wool',
+    size: 'Medium (9")',
+    price: 29.99,
+    rating: 4.9,
+    reviewCount: 84,
+    isBestSeller: true,
+    stockCount: 11,
+    prepTimeDays: 2,
+    description: 'Warm and adorable beanie featuring 3D handcrafted teddy bear ears. Available in versatile warm beige.',
+    highlights: ['Super stretchy comfortable fit', 'Soft non-itchy wool blend', 'Double layered warmth'],
+    careInstructions: 'Hand wash cool with wool detergent.',
+    imageBg: 'from-amber-200 via-warmbrown-100 to-peach-100',
+    imageIconName: 'BearCap',
+  },
+  {
+    id: 'pastel-rose-bouquet',
+    name: 'Forever Pastel Rose Yarn Bouquet',
+    productType: 'Bouquets',
+    designTheme: 'Flowers',
+    category: 'Flowers',
+    yarnType: 'Milk Cotton',
+    size: 'Giant (15")',
+    price: 49.99,
+    originalPrice: 58.00,
+    rating: 5.0,
+    reviewCount: 112,
+    isBestSeller: true,
+    stockCount: 6,
+    prepTimeDays: 4,
+    description: 'A breathtaking bouquet of 6 hand-crocheted roses wrapped in Korean craft paper and satin ribbon.',
+    highlights: ['Includes 6 long-stemmed roses & baby breath stems', 'Ready for gifting with luxury wrap', 'Will never wilt'],
+    careInstructions: 'Keep in dry area out of direct sunlight.',
+    imageBg: 'from-pink-200 via-rose-100 to-purple-100',
+    imageIconName: 'Bouquet',
+  },
+  {
+    id: 'ladybug-head-clip',
+    name: 'Lucky Ladybug Hair Clip Pair',
+    productType: 'Head Clips',
+    designTheme: 'Insects',
+    category: 'Insects',
+    yarnType: 'Milk Cotton',
+    size: 'Mini (4")',
+    price: 11.50,
+    rating: 4.85,
+    reviewCount: 36,
+    stockCount: 16,
+    prepTimeDays: 1,
+    description: 'Set of two cheerful red and black ladybug hair snaps lined with gentle alligator clips.',
+    highlights: ['No-snag felt backing', 'Secure grip for all hair types', 'Set of 2 included'],
+    careInstructions: 'Spot clean gently.',
+    imageBg: 'from-red-200 via-rose-100 to-amber-100',
+    imageIconName: 'Ladybug',
+  },
+  {
+    id: 'lemon-coasters-set',
+    name: 'Zesty Lemon Slice Coaster Set',
+    productType: 'Coasters',
+    designTheme: 'Fruits',
+    category: 'Fruits',
+    yarnType: 'Milk Cotton',
+    size: 'Mini (4")',
+    price: 19.99,
+    rating: 4.9,
+    reviewCount: 57,
+    stockCount: 12,
+    prepTimeDays: 2,
+    description: 'Set of 4 bright yellow citrus slice coasters crafted with absorbent high-gauge cotton yarn.',
+    highlights: ['Includes set of 4 coasters', 'Protect wooden surfaces from condensation', 'Bright summer vibe'],
+    careInstructions: 'Machine washable.',
+    imageBg: 'from-yellow-200 via-amber-100 to-lime-100',
+    imageIconName: 'Lemon',
+  },
+  {
+    id: 'tulip-hair-band',
+    name: 'Blooming Tulip Crochet Hairband',
+    productType: 'Hair Bands',
+    designTheme: 'Flowers',
+    category: 'Flowers',
+    yarnType: 'Organic Bamboo',
+    size: 'Mini (4")',
+    price: 15.99,
+    rating: 4.8,
+    reviewCount: 29,
+    isNew: true,
+    stockCount: 14,
+    prepTimeDays: 1,
+    description: 'Soft flexible headband decorated with 3 miniature 3D tulip buds in pastel pink and yellow.',
+    highlights: ['Comfortable elastic band, non-pinching', 'Ultra-soft bamboo yarn', 'Hand-stitched flowers'],
+    careInstructions: 'Gentle hand wash cold.',
+    imageBg: 'from-pink-100 via-purple-100 to-peach-100',
+    imageIconName: 'Tulip',
+  },
+  {
+    id: 'toadstool-pencil-toppers',
+    name: 'Toadstool Magic Pencil Toppers',
+    productType: 'Pencil Toppers',
+    designTheme: 'Fantasy',
+    category: 'Fantasy',
+    yarnType: 'Milk Cotton',
+    size: 'Mini (4")',
+    price: 9.99,
+    rating: 4.7,
+    reviewCount: 44,
+    stockCount: 25,
+    prepTimeDays: 1,
+    description: 'Pack of 3 cute red mushroom cap pencil toppers. Fits standard #2 pencils and pens!',
+    highlights: ['Includes 3 mushroom toppers', 'Fits pencils, pens, and stylus tips', 'Fun back-to-school accessory'],
+    careInstructions: 'Spot clean as needed.',
+    imageBg: 'from-red-100 via-rose-100 to-amber-100',
+    imageIconName: 'Mushroom',
+  },
 ];
 
 export const MOCK_REVIEWS: Review[] = [
@@ -407,24 +785,24 @@ export const MOCK_REVIEWS: Review[] = [
     comment: 'Custom requested a purple dragon for my daughter’s birthday. The team was so responsive on Instagram and brought the idea to life perfectly!',
     verified: true,
     avatarBg: 'bg-purple-200 text-purple-900',
-  }
+  },
 ];
 
 export const FAQS = [
   {
     question: 'How long does a handmade doll take to prepare?',
-    answer: 'Standard dolls in stock ship within 1-2 business days. Custom or made-to-order dolls take between 3-5 business days to carefully crochet, stuff, and assemble before dispatch.'
+    answer: 'Standard dolls in stock ship within 1-2 business days. Custom or made-to-order dolls take between 3-5 business days to carefully crochet, stuff, and assemble before dispatch.',
   },
   {
     question: 'Can I request a custom color or design?',
-    answer: 'Yes! We love custom requests. Use our "Custom Order" page to describe your dream doll or send us reference photos. You can also chat directly with us on Instagram or WhatsApp to finalize details.'
+    answer: 'Yes! We love custom requests. Use our "Custom Order" page to describe your dream doll or send us reference photos. You can also chat directly with us on Instagram or WhatsApp to finalize details.',
   },
   {
     question: 'Are the dolls safe for small children?',
-    answer: 'All our dolls feature safety-locked washers for eyes and hand-embroidered details. For infants, we also offer 100% embroidered baby-safe versions with no plastic elements.'
+    answer: 'All our dolls feature safety-locked washers for eyes and hand-embroidered details. For infants, we also offer 100% embroidered baby-safe versions with no plastic elements.',
   },
   {
     question: 'How should I clean and care for my yarn doll?',
-    answer: 'We recommend gentle spot cleaning with cold water and mild soap. For full washes, place the doll in a mesh laundry bag, wash on gentle cold cycle, and lay flat in shade to dry.'
-  }
+    answer: 'We recommend gentle spot cleaning with cold water and mild soap. For full washes, place the doll in a mesh laundry bag, wash on gentle cold cycle, and lay flat in shade to dry.',
+  },
 ];

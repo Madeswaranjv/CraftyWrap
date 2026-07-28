@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export default function SignUpPage() {
-  const { loginWithGoogle } = useCart();
+  const { register, loginWithGoogle } = useCart();
   const router = useRouter();
 
   const [fullName, setFullName] = useState('');
@@ -27,11 +27,62 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
-  const handleSignUpSubmit = (e: React.FormEvent) => {
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    loginWithGoogle();
-    router.push('/account');
+    setErrorMsg(null);
+
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedName || trimmedName.length < 2) {
+      setErrorMsg('Full Name must be at least 2 characters long.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setErrorMsg('Password must be at least 8 characters long.');
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      setErrorMsg('Password must contain at least one letter and one number.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+
+    if (trimmedPhone && trimmedPhone.length < 6) {
+      setErrorMsg('Phone number must be at least 6 digits long.');
+      return;
+    }
+
+    if (!agreed) {
+      setErrorMsg('You must agree to the Terms of Service and Privacy Policy.');
+      return;
+    }
+
+    setIsSigningUp(true);
+    try {
+      await register(trimmedName, trimmedEmail, password, trimmedPhone || undefined);
+      router.push('/');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Registration failed. Please try again.');
+    } finally {
+      setIsSigningUp(false);
+    }
   };
 
   const handleSocialClick = () => {
@@ -102,6 +153,19 @@ export default function SignUpPage() {
               Sign up to order handmade gifts & track your shipments
             </p>
           </div>
+
+          {errorMsg && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-xs">
+              <span>{errorMsg}</span>
+              <button
+                type="button"
+                onClick={() => setErrorMsg(null)}
+                className="text-warmbrown-500 hover:text-warmbrown-800 font-bold ml-2"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleSignUpSubmit} className="space-y-3.5">
             {/* Full Name Input */}

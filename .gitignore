@@ -4,6 +4,7 @@ node_modules/
 # Next.js build output
 frontend/.next/
 frontend/out/
+backend/dist/
 
 # Environment files and local secrets
 .env
@@ -18,7 +19,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
+.agents/
 # Test and coverage output
 coverage/
 .nyc_output/

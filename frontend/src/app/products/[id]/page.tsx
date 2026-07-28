@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { PRODUCTS, MOCK_REVIEWS, Product } from '@/data/mockData';
 import { useCart } from '@/context/CartContext';
 import { ProductCard } from '@/components/ProductCard';
 import { StarRating } from '@/components/StarRating';
@@ -22,6 +21,18 @@ import {
   Star,
   Check,
 } from 'lucide-react';
+import { apiRequest } from '@/lib/api';
+import { CatalogProduct, toCatalogProduct } from '@/lib/catalog';
+
+interface ProductReview {
+  _id: string;
+  author: string;
+  rating: number;
+  comment: string;
+  verified: boolean;
+  userPhoto?: string;
+  createdAt: string;
+}
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -29,8 +40,9 @@ export default function ProductDetailPage() {
   const productId = params?.id as string;
   const { addToCart } = useCart();
 
-  const product = PRODUCTS.find((p) => p.id === productId) || PRODUCTS[0];
-  const relatedProducts = PRODUCTS.filter((p) => p.id !== product.id && p.category === product.category).slice(0, 4);
+  const [product, setProduct] = useState<CatalogProduct | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<CatalogProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'description' | 'care' | 'reviews'>('description');
@@ -40,9 +52,34 @@ export default function ProductDetailPage() {
   const [reviewName, setReviewName] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
-  const [reviewImageName, setReviewImageName] = useState<string | null>(null);
-  const [reviewsList, setReviewsList] = useState(MOCK_REVIEWS);
+  const [reviewImage, setReviewImage] = useState<File | null>(null);
+  const [reviewsList, setReviewsList] = useState<ProductReview[]>([]);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const loadProduct = async () => {
+      setIsLoading(true);
+      try {
+        const [productData, relatedData, reviewsData] = await Promise.all([
+          apiRequest<CatalogProduct>(`/products/${encodeURIComponent(productId)}`),
+          apiRequest<CatalogProduct[]>(`/products/${encodeURIComponent(productId)}/related`),
+          apiRequest<ProductReview[]>(`/reviews/product/${encodeURIComponent(productId)}`),
+        ]);
+        if (!isCurrent) return;
+        setProduct(toCatalogProduct(productData));
+        setRelatedProducts(relatedData.map(toCatalogProduct));
+        setReviewsList(reviewsData);
+      } catch (error) {
+        if (isCurrent) setFormError(error instanceof Error ? error.message : 'Unable to load this product.');
+      } finally {
+        if (isCurrent) setIsLoading(false);
+      }
+    };
+    void loadProduct();
+    return () => { isCurrent = false; };
+  }, [productId]);
 
   const renderIcon = (name: string) => {
     switch (name) {
@@ -62,27 +99,33 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleAddReview = (e: React.FormEvent) => {
+  const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (reviewName.trim() && reviewComment.trim()) {
-      const newRev = {
-        id: `rev-${Date.now()}`,
-        author: reviewName,
-        rating: reviewRating,
-        date: 'Just now',
-        comment: reviewComment,
-        verified: true,
-        avatarBg: 'bg-peach-300 text-warmbrown-800',
-        userPhoto: reviewImageName ? 'Mock Uploaded Photo' : undefined,
-      };
-      setReviewsList([newRev, ...reviewsList]);
-      setReviewName('');
-      setReviewComment('');
-      setReviewImageName(null);
-      setReviewSubmitted(true);
-      setTimeout(() => setReviewSubmitted(false), 4000);
+      try {
+        const formData = new FormData();
+        formData.set('author', reviewName);
+        formData.set('rating', String(reviewRating));
+        formData.set('comment', reviewComment);
+        if (reviewImage) formData.set('image', reviewImage);
+        const review = await apiRequest<ProductReview>(`/reviews/product/${encodeURIComponent(productId)}`, { method: 'POST', body: formData });
+        setReviewsList((current) => [review, ...current]);
+        setReviewName('');
+        setReviewComment('');
+        setReviewImage(null);
+        setReviewSubmitted(true);
+        setTimeout(() => setReviewSubmitted(false), 4000);
+        // Refresh product details to show updated rating average
+        const refreshedProduct = await apiRequest<CatalogProduct>(`/products/${encodeURIComponent(productId)}`);
+        setProduct(toCatalogProduct(refreshedProduct));
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : 'Unable to submit your review.');
+      }
     }
   };
+
+  if (isLoading) return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-warmbrown-600">Loading product…</div>;
+  if (!product) return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-warmbrown-600">{formError ?? 'Product not found.'}</div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
@@ -333,15 +376,15 @@ export default function ProductDetailPage() {
             {/* Reviews List */}
             <div className="space-y-4">
               {reviewsList.map((rev) => (
-                <div key={rev.id} className="bg-peach-50/60 p-4 rounded-2xl border border-peach-100 space-y-2">
+                <div key={rev._id} className="bg-peach-50/60 p-4 rounded-2xl border border-peach-100 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${rev.avatarBg}`}>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-peach-300 text-warmbrown-800">
                         {rev.author[0]}
                       </div>
                       <div>
                         <h5 className="font-bold text-warmbrown-800 text-xs">{rev.author}</h5>
-                        <span className="text-[10px] text-warmbrown-400">{rev.date}</span>
+                        <span className="text-[10px] text-warmbrown-400">{new Date(rev.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
                     <StarRating rating={rev.rating} showText={false} size={14} />
@@ -413,15 +456,15 @@ export default function ProductDetailPage() {
                     <div className="flex items-center gap-3">
                       <label className="bg-peach-100 hover:bg-peach-200 border border-peach-300 text-warmbrown-800 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-2">
                         <Upload size={14} />
-                        <span>{reviewImageName ? reviewImageName : 'Choose Photo'}</span>
+                        <span>{reviewImage ? reviewImage.name : 'Choose Photo'}</span>
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => setReviewImageName(e.target.files?.[0]?.name || null)}
+                          onChange={(e) => setReviewImage(e.target.files?.[0] ?? null)}
                           className="hidden"
                         />
                       </label>
-                      {reviewImageName && (
+                      {reviewImage && (
                         <span className="text-xs text-emerald-700 font-medium">Ready to submit</span>
                       )}
                     </div>

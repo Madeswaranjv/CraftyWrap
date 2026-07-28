@@ -57,8 +57,27 @@ h1, h2, h3, h4, h5, h6 {
   animation: pulseSoft 3s ease-in-out infinite;
 }
 
+@keyframes sparkleGlow {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.9; }
+  50% { transform: scale(1.25) rotate(15deg); opacity: 1; filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6)); }
+}
+
+.animate-sparkle {
+  animation: sparkleGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes yarnOrbit {
+  0% { transform: rotate(0deg) translateX(8px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(8px) rotate(-360deg); }
+}
+
+.animate-orbit {
+  animation: yarnOrbit 12s linear infinite;
+}
+
 /* Handmade wave divider pattern */
 .crafty-wave {
   background-image: radial-gradient(circle at 10px -5px, transparent 12px, #FDF0E6 13px);
   background-size: 20px 20px;
 }
+

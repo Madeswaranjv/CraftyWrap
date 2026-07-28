@@ -2,11 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Category } from '@/data/mockData';
+import { CatalogTheme } from '@/lib/catalog';
 import { ArrowUpRight } from 'lucide-react';
 
 interface CategoryTileProps {
-  category: Category;
+  category: CatalogTheme;
 }
 
 export const CategoryTile: React.FC<CategoryTileProps> = ({ category }) => {
