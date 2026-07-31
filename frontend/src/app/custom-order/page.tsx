@@ -3,6 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { InstagramLogo, WhatsAppLogo } from '@/components/SocialIcons';
+import { CustomSelect } from '@/components/CustomSelect';
 import { apiRequest, getStoredAccessToken } from '@/lib/api';
 import {
   Wand2,
@@ -25,7 +26,7 @@ function CustomOrderContent() {
     refDoll ? `I would like to request a custom variation of "${refDoll}": ` : ''
   );
   const [yarnPreference, setYarnPreference] = useState('Velvet Chenille');
-  const [budget, setBudget] = useState('$30 - $50');
+  const [budget, setBudget] = useState('₹1,500 - ₹3,000');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -146,10 +147,10 @@ function CustomOrderContent() {
         </div>
       ) : (
         /* Custom Order Request Form */
-        <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-10 rounded-3xl border border-peach-200/80 shadow-soft space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1F1610] p-6 sm:p-10 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="text-xs font-bold text-warmbrown-800 uppercase tracking-wider block mb-1">
+              <label className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 uppercase tracking-wider block mb-1">
                 Your Full Name *
               </label>
               <input
@@ -158,12 +159,12 @@ function CustomOrderContent() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Jessica Parker"
-                className="w-full bg-peach-50 border border-peach-200 rounded-xl px-4 py-3 text-xs outline-none focus:border-warmbrown-600"
+                className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-4 py-3 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-warmbrown-800 uppercase tracking-wider block mb-1">
+              <label className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 uppercase tracking-wider block mb-1">
                 Email Address or Phone Number *
               </label>
               <input
@@ -172,46 +173,46 @@ function CustomOrderContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g., jessica@gmail.com or +1 555-0192"
-                className="w-full bg-peach-50 border border-peach-200 rounded-xl px-4 py-3 text-xs outline-none focus:border-warmbrown-600"
+                className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-4 py-3 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="text-xs font-bold text-warmbrown-800 uppercase tracking-wider block mb-1">
+              <label className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 uppercase tracking-wider block mb-1">
                 Preferred Yarn Texture
               </label>
-              <select
+              <CustomSelect
                 value={yarnPreference}
-                onChange={(e) => setYarnPreference(e.target.value)}
-                className="w-full bg-peach-50 border border-peach-200 rounded-xl px-4 py-3 text-xs outline-none focus:border-warmbrown-600 font-semibold"
-              >
-                <option value="Velvet Chenille">Velvet Chenille (Ultra Soft & Plush)</option>
-                <option value="Milk Cotton">Milk Cotton (Crisp Stitch Definition)</option>
-                <option value="Chunky Wool">Chunky Wool (Heavy Huggable)</option>
-                <option value="Organic Bamboo">Organic Bamboo (Hypoallergenic)</option>
-              </select>
+                onChange={(val) => setYarnPreference(String(val))}
+                options={[
+                  { value: 'Velvet Chenille', label: 'Velvet Chenille (Ultra Soft & Plush)' },
+                  { value: 'Milk Cotton', label: 'Milk Cotton (Crisp Stitch Definition)' },
+                  { value: 'Chunky Wool', label: 'Chunky Wool (Heavy Huggable)' },
+                  { value: 'Organic Bamboo', label: 'Organic Bamboo (Hypoallergenic)' },
+                ]}
+              />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-warmbrown-800 uppercase tracking-wider block mb-1">
+              <label className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 uppercase tracking-wider block mb-1">
                 Estimated Budget Range
               </label>
-              <select
+              <CustomSelect
                 value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                className="w-full bg-peach-50 border border-peach-200 rounded-xl px-4 py-3 text-xs outline-none focus:border-warmbrown-600 font-semibold"
-              >
-                <option value="$20 - $35">$20 - $35 (Mini Plushies / Keychains)</option>
-                <option value="$35 - $55">$35 - $55 (Standard Medium Dolls)</option>
-                <option value="$55 - $90">$55 - $90 (Giant / Detailed Custom Art)</option>
-              </select>
+                onChange={(val) => setBudget(String(val))}
+                options={[
+                  { value: '₹500 - ₹1,500', label: '₹500 - ₹1,500 (Mini Plushies / Keychains)' },
+                  { value: '₹1,500 - ₹3,000', label: '₹1,500 - ₹3,000 (Standard Medium Dolls)' },
+                  { value: '₹3,000 - ₹5,000', label: '₹3,000 - ₹5,000 (Giant / Detailed Custom Art)' },
+                ]}
+              />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-bold text-warmbrown-800 uppercase tracking-wider block mb-1">
+            <label className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 uppercase tracking-wider block mb-1">
               Custom Doll Description & Details *
             </label>
             <textarea
@@ -220,16 +221,16 @@ function CustomOrderContent() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what doll you want us to create (e.g., color preferences, outfit, size, special features like embroidered initials)..."
-              className="w-full bg-peach-50 border border-peach-200 rounded-xl p-4 text-xs outline-none focus:border-warmbrown-600"
+              className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl p-4 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
             />
           </div>
 
           {/* Reference Image Upload Field */}
           <div>
-            <label className="text-xs font-bold text-warmbrown-800 uppercase tracking-wider block mb-1">
+            <label className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 uppercase tracking-wider block mb-1">
               Upload Reference Photo or Drawing (Optional)
             </label>
-            <div className="border-2 border-dashed border-peach-300 rounded-2xl p-6 text-center hover:bg-peach-50 transition-colors">
+            <div className="border-2 border-dashed border-peach-300 dark:border-warmbrown-700 rounded-2xl p-6 text-center hover:bg-peach-50 dark:hover:bg-warmbrown-900/50 transition-colors">
               {imagePreview ? (
                 <div className="space-y-3">
                   <div className="relative w-32 h-32 mx-auto rounded-2xl overflow-hidden border border-peach-300 shadow-md">

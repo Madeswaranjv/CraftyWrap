@@ -1,590 +1,436 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ChevronLeft, ChevronRight, Loader2, Search } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
-import { Filter, SlidersHorizontal, X, RotateCcw } from 'lucide-react';
-import { FadeInSection } from '@/components/motion/FadeInSection';
+import { CustomSelect } from '@/components/CustomSelect';
 import { StaggeredGrid } from '@/components/motion/StaggeredGrid';
 import { apiRequest } from '@/lib/api';
-import { CatalogProduct, CatalogProductType, CatalogTheme, toCatalogProduct, toCatalogTheme } from '@/lib/catalog';
+import { CatalogProduct, CatalogTheme, toCatalogProduct, toCatalogTheme } from '@/lib/catalog';
+
+const CATALOG_PAGE_SIZE = 12;
+const MAX_CATALOG_PRICE = 5000;
+
+interface CatalogResponse {
+  products: CatalogProduct[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface CatalogParams {
+  productType: string;
+  theme: string;
+  yarnType: string;
+  size: string;
+  maxPrice: number;
+  sort: string;
+  page: number;
+  search: string;
+  specialFilter: string;
+}
+
+function urlPrice(value: string | null): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : MAX_CATALOG_PRICE;
+}
+
+function urlPage(value: string | null): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
 
 function CollectionsContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const productTypeParam = searchParams.get('productType') || 'All';
-  const themeParam = searchParams.get('theme') || searchParams.get('category') || 'All';
-  const yarnTypeParam = searchParams.get('yarnType') || 'All';
-  const sizeParam = searchParams.get('size') || 'All';
-  const searchParam = searchParams.get('search') || '';
-  const filterParam = searchParams.get('filter') || '';
 
-  const [productsList, setProductsList] = useState<CatalogProduct[]>([]);
-  const [productTypesList, setProductTypesList] = useState<CatalogProductType[]>([]);
-  const [designThemesList, setDesignThemesList] = useState<CatalogTheme[]>([]);
+  const [activeQuery, setActiveQuery] = useState(() => searchParams.toString());
 
-  const [selectedProductType, setSelectedProductType] = useState<string>(productTypeParam);
-  const [selectedTheme, setSelectedTheme] = useState<string>(themeParam);
-  const [selectedYarnType, setSelectedYarnType] = useState<string>(yarnTypeParam);
-  const [selectedSize, setSelectedSize] = useState<string>(sizeParam);
-  const [maxPrice, setMaxPrice] = useState<number>(65);
-  const [sortBy, setSortBy] = useState<string>('featured');
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
-
+  // Keep state in sync with URL changes
   useEffect(() => {
-    let isCurrent = true;
-    const fetchCatalogData = async () => {
+    setActiveQuery(searchParams.toString());
+  }, [searchParams]);
+
+  const activeSearchParams = useMemo(() => new URLSearchParams(activeQuery), [activeQuery]);
+
+  // URL query state source of truth
+  const catalogParams = useMemo<CatalogParams>(() => ({
+    productType: activeSearchParams.get('productType') || 'All',
+    theme: activeSearchParams.get('theme') || activeSearchParams.get('category') || 'All',
+    yarnType: activeSearchParams.get('yarnType') || 'All',
+    size: activeSearchParams.get('size') || 'All',
+    maxPrice: urlPrice(activeSearchParams.get('maxPrice')),
+    sort: activeSearchParams.get('sort') || 'featured',
+    page: urlPage(activeSearchParams.get('page')),
+    search: activeSearchParams.get('search') || '',
+    specialFilter: activeSearchParams.get('filter') || '',
+  }), [activeSearchParams]);
+
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [designThemesList, setDesignThemesList] = useState<CatalogTheme[]>([]);
+  const [pagination, setPagination] = useState<CatalogResponse['pagination']>({
+    page: 1,
+    limit: CATALOG_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState(false);
+  const [catalogRetry, setCatalogRetry] = useState(0);
+  const [searchInput, setSearchInput] = useState(catalogParams.search);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const updateCatalogParams = useCallback((updates: Record<string, string | number | null | undefined>, replace = false) => {
+    const nextParams = new URLSearchParams(activeQuery);
+    const isChangingPage = Object.prototype.hasOwnProperty.call(updates, 'page');
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '' || value === 'All') {
+        nextParams.delete(key);
+      } else {
+        nextParams.set(key, String(value));
+      }
+    });
+
+    if (!isChangingPage) {
+      nextParams.delete('page');
+    }
+
+    const nextQueryString = nextParams.toString();
+    setActiveQuery(nextQueryString);
+    const targetUrl = nextQueryString ? `${pathname}?${nextQueryString}` : pathname;
+
+    if (replace) {
+      router.replace(targetUrl, { scroll: false });
+    } else {
+      router.push(targetUrl, { scroll: false });
+    }
+  }, [activeQuery, pathname, router]);
+
+  // Keep search input state aligned with URL state
+  useEffect(() => {
+    setSearchInput(catalogParams.search);
+  }, [catalogParams.search]);
+
+  // Fetch themes for top navigation tabs
+  useEffect(() => {
+    const fetchThemes = async () => {
       try {
-        const [productsRes, productTypesRes, designThemesRes] = await Promise.all([
-          apiRequest<{ products: CatalogProduct[] }>('/products?limit=100'),
-          apiRequest<CatalogProductType[]>('/product-types'),
-          apiRequest<Omit<CatalogTheme, 'id' | 'badgeColor' | 'bgColor'>[]>('/design-themes'),
-        ]);
-        if (!isCurrent) return;
-        setProductsList(productsRes.products.map(toCatalogProduct));
-        setProductTypesList(productTypesRes);
-        setDesignThemesList(designThemesRes.map((t, idx) => toCatalogTheme(t, idx)));
+        const data = await apiRequest<Array<Omit<CatalogTheme, 'id' | 'badgeColor' | 'bgColor'>>>('/design-themes');
+        setDesignThemesList(data.map((theme, index) => toCatalogTheme(theme, index)));
       } catch {
-        // Handle error
+        setDesignThemesList([]);
       }
     };
-    void fetchCatalogData();
-    return () => { isCurrent = false; };
+    void fetchThemes();
   }, []);
 
-  // Core Faceted Filter Evaluator
-  const matchesFilter = (
-    product: CatalogProduct,
-    overrides?: {
-      productType?: string;
-      designTheme?: string;
-      yarnType?: string;
-      size?: string;
-      maxPrice?: number;
-      search?: string;
-      specialFilter?: string;
-    }
-  ) => {
-    const pType = overrides?.productType !== undefined ? overrides.productType : selectedProductType;
-    const theme = overrides?.designTheme !== undefined ? overrides.designTheme : selectedTheme;
-    const yarn = overrides?.yarnType !== undefined ? overrides.yarnType : selectedYarnType;
-    const sz = overrides?.size !== undefined ? overrides.size : selectedSize;
-    const price = overrides?.maxPrice !== undefined ? overrides.maxPrice : maxPrice;
-    const search = overrides?.search !== undefined ? overrides.search : searchParam;
-    const filter = overrides?.specialFilter !== undefined ? overrides.specialFilter : filterParam;
-
-    // 1. Product Type Match
-    if (pType !== 'All' && product.productType !== pType) {
-      return false;
-    }
-
-    // 2. Design & Theme Match
-    if (theme !== 'All' && product.designTheme !== theme && product.category !== theme) {
-      return false;
-    }
-
-    // 3. Yarn Material Match
-    if (yarn !== 'All' && product.yarnType !== yarn) {
-      return false;
-    }
-
-    // 4. Size Match
-    if (sz !== 'All' && !product.size.startsWith(sz)) {
-      return false;
-    }
-
-    // 5. Price Match
-    if (product.price > price) {
-      return false;
-    }
-
-    // 6. Search Query Match
-    if (search) {
-      const q = search.toLowerCase();
-      const nameMatch = product.name.toLowerCase().includes(q);
-      const descMatch = product.description.toLowerCase().includes(q);
-      const typeMatch = (product.productType || '').toLowerCase().includes(q);
-      const themeMatch = (product.designTheme || product.category || '').toLowerCase().includes(q);
-      if (!nameMatch && !descMatch && !typeMatch && !themeMatch) {
-        return false;
-      }
-    }
-
-    // 7. Special Filter Params
-    if (filter === 'best-seller' && !product.isBestSeller) {
-      return false;
-    }
-    if (filter === 'featured' && product.rating < 4.8) {
-      return false;
-    }
-
-    return true;
-  };
-
-  // Filtered product dataset
-  const filteredProducts = useMemo(() => {
-    return productsList.filter((product) => matchesFilter(product)).sort((a, b) => {
-      if (sortBy === 'price-low') return a.price - b.price;
-      if (sortBy === 'price-high') return b.price - a.price;
-      if (sortBy === 'rating') return b.rating - a.rating;
-      if (sortBy === 'newest') return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
-      return (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0);
+  const productRequestQuery = useMemo(() => {
+    const params = new URLSearchParams({
+      page: String(catalogParams.page),
+      limit: String(CATALOG_PAGE_SIZE),
+      sort: catalogParams.sort,
     });
-  }, [
-    productsList,
-    selectedProductType,
-    selectedTheme,
-    selectedYarnType,
-    selectedSize,
-    maxPrice,
-    searchParam,
-    filterParam,
-    sortBy,
-  ]);
+    if (catalogParams.maxPrice < MAX_CATALOG_PRICE) {
+      params.set('maxPrice', String(catalogParams.maxPrice));
+    }
+    if (catalogParams.search) params.set('search', catalogParams.search);
+    if (catalogParams.productType !== 'All') params.set('productType', catalogParams.productType);
+    if (catalogParams.theme !== 'All') params.set('designTheme', catalogParams.theme);
+    if (catalogParams.yarnType !== 'All') params.set('yarnType', catalogParams.yarnType);
+    if (catalogParams.size !== 'All') params.set('size', catalogParams.size);
+    if (catalogParams.specialFilter === 'best-seller') params.set('bestSeller', 'true');
+    return params.toString();
+  }, [catalogParams]);
 
-  // Dynamic Faceted Search Counts next to each filter option
-  const facetedCounts = useMemo(() => {
-    const productTypeCounts: Record<string, number> = { All: 0 };
-    productTypesList.forEach((pt) => {
-      productTypeCounts[pt.name] = 0;
-    });
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchProducts = async () => {
+      setIsCatalogLoading(true);
+      setCatalogError(false);
+      try {
+        const response = await apiRequest<{
+          products: Record<string, unknown>[];
+          pagination: CatalogResponse['pagination'];
+        }>(`/products?${productRequestQuery}`, { signal: controller.signal });
 
-    const themeCounts: Record<string, number> = { All: 0 };
-    designThemesList.forEach((dt) => {
-      themeCounts[dt.name] = 0;
-    });
-
-    const yarnCounts: Record<string, number> = { All: 0 };
-    ['Velvet Chenille', 'Milk Cotton', 'Chunky Wool', 'Organic Bamboo'].forEach((y) => {
-      yarnCounts[y] = 0;
-    });
-
-    const sizeCounts: Record<string, number> = { All: 0 };
-    ['Mini', 'Medium', 'Giant'].forEach((s) => {
-      sizeCounts[s] = 0;
-    });
-
-    productsList.forEach((product) => {
-      // Product Type Facet
-      if (matchesFilter(product, { productType: 'All' })) {
-        productTypeCounts.All += 1;
-        if (productTypeCounts[product.productType] !== undefined) {
-          productTypeCounts[product.productType] += 1;
+        setProducts(response.products.map((item) => toCatalogProduct(item as unknown as Parameters<typeof toCatalogProduct>[0])));
+        setPagination(response.pagination);
+      } catch (error) {
+        if ((error as { name?: string }).name !== 'AbortError') {
+          setCatalogError(true);
         }
+      } finally {
+        setIsCatalogLoading(false);
       }
+    };
 
-      // Design Theme Facet
-      if (matchesFilter(product, { designTheme: 'All' })) {
-        themeCounts.All += 1;
-        const themeName = product.designTheme || product.category;
-        if (themeCounts[themeName] !== undefined) {
-          themeCounts[themeName] += 1;
-        }
-      }
-
-      // Yarn Type Facet
-      if (matchesFilter(product, { yarnType: 'All' })) {
-        yarnCounts.All += 1;
-        if (yarnCounts[product.yarnType] !== undefined) {
-          yarnCounts[product.yarnType] += 1;
-        }
-      }
-
-      // Size Facet
-      if (matchesFilter(product, { size: 'All' })) {
-        sizeCounts.All += 1;
-        const matchingSize = ['Mini', 'Medium', 'Giant'].find((s) =>
-          product.size.startsWith(s)
-        );
-        if (matchingSize && sizeCounts[matchingSize] !== undefined) {
-          sizeCounts[matchingSize] += 1;
-        }
-      }
-    });
-
-    return { productTypeCounts, themeCounts, yarnCounts, sizeCounts };
-  }, [
-    productsList,
-    productTypesList,
-    designThemesList,
-    selectedProductType,
-    selectedTheme,
-    selectedYarnType,
-    selectedSize,
-    maxPrice,
-    searchParam,
-    filterParam,
-  ]);
-
-  const resetFilters = () => {
-    setSelectedProductType('All');
-    setSelectedTheme('All');
-    setSelectedYarnType('All');
-    setSelectedSize('All');
-    setMaxPrice(65);
-  };
+    void fetchProducts();
+    return () => controller.abort();
+  }, [catalogRetry, productRequestQuery]);
 
   const hasActiveFilters =
-    selectedProductType !== 'All' ||
-    selectedTheme !== 'All' ||
-    selectedYarnType !== 'All' ||
-    selectedSize !== 'All' ||
-    maxPrice < 65;
+    catalogParams.productType !== 'All' ||
+    catalogParams.theme !== 'All' ||
+    catalogParams.yarnType !== 'All' ||
+    catalogParams.size !== 'All' ||
+    catalogParams.search !== '' ||
+    catalogParams.maxPrice < MAX_CATALOG_PRICE;
 
-  const renderFilterSidebar = (isMobile = false) => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-peach-100 pb-3">
-        <h3 className="font-extrabold text-warmbrown-800 text-base flex items-center gap-2">
-          <Filter size={16} /> Filter Products
-        </h3>
-        <button
-          onClick={resetFilters}
-          className="text-xs font-semibold text-warmbrown-500 hover:text-warmbrown-800 flex items-center gap-1 transition-colors"
-        >
-          <RotateCcw size={12} /> Reset
-        </button>
-      </div>
-
-      {/* 1. PRODUCT TYPE FILTER */}
-      <div className="space-y-2">
-        <label className="text-xs font-bold text-warmbrown-700 uppercase tracking-wider block">
-          Product Type
-        </label>
-        <div className="space-y-1 text-xs max-h-56 overflow-y-auto pr-1">
-          <button
-            onClick={() => {
-              setSelectedProductType('All');
-              if (isMobile) setIsMobileFilterOpen(false);
-            }}
-            className={`w-full text-left px-3 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${
-              selectedProductType === 'All'
-                ? 'bg-warmbrown-800 text-white font-bold shadow-xs'
-                : 'hover:bg-peach-50 text-warmbrown-700'
-            }`}
-          >
-            <span>All Product Types</span>
-            <span className="opacity-80">{facetedCounts.productTypeCounts.All}</span>
-          </button>
-          {productTypesList.map((pt) => {
-            const count = facetedCounts.productTypeCounts[pt.name] || 0;
-            return (
-              <button
-                key={pt._id || pt.name}
-                onClick={() => {
-                  setSelectedProductType(pt.name);
-                  if (isMobile) setIsMobileFilterOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${
-                  selectedProductType === pt.name
-                    ? 'bg-warmbrown-800 text-white font-bold shadow-xs'
-                    : 'hover:bg-peach-50 text-warmbrown-700'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span>{pt.icon ?? '🧶'}</span> {pt.name}
-                </span>
-                <span className="opacity-70">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. DESIGN & THEME FILTER */}
-      <div className="space-y-2 pt-3 border-t border-peach-100">
-        <label className="text-xs font-bold text-warmbrown-700 uppercase tracking-wider block">
-          Design & Theme
-        </label>
-        <div className="space-y-1 text-xs max-h-56 overflow-y-auto pr-1">
-          <button
-            onClick={() => {
-              setSelectedTheme('All');
-              if (isMobile) setIsMobileFilterOpen(false);
-            }}
-            className={`w-full text-left px-3 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${
-              selectedTheme === 'All'
-                ? 'bg-warmbrown-800 text-white font-bold shadow-xs'
-                : 'hover:bg-peach-50 text-warmbrown-700'
-            }`}
-          >
-            <span>All Themes</span>
-            <span className="opacity-80">{facetedCounts.themeCounts.All}</span>
-          </button>
-          {designThemesList.map((theme) => {
-            const count = facetedCounts.themeCounts[theme.name] || 0;
-            return (
-              <button
-                key={theme._id || theme.id}
-                onClick={() => {
-                  setSelectedTheme(theme.name);
-                  if (isMobile) setIsMobileFilterOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${
-                  selectedTheme === theme.name
-                    ? 'bg-warmbrown-800 text-white font-bold shadow-xs'
-                    : 'hover:bg-peach-50 text-warmbrown-700'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span>{theme.icon}</span> {theme.name}
-                </span>
-                <span className="opacity-70">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. YARN MATERIAL FILTER */}
-      <div className="space-y-2 pt-3 border-t border-peach-100">
-        <label className="text-xs font-bold text-warmbrown-700 uppercase tracking-wider block">
-          Yarn Material
-        </label>
-        <div className="space-y-1 text-xs">
-          {['All', 'Velvet Chenille', 'Milk Cotton', 'Chunky Wool', 'Organic Bamboo'].map(
-            (yarn) => {
-              const count = facetedCounts.yarnCounts[yarn] || 0;
-              return (
-                <button
-                  key={yarn}
-                  onClick={() => {
-                    setSelectedYarnType(yarn);
-                    if (isMobile) setIsMobileFilterOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 rounded-xl font-medium transition-colors flex items-center justify-between ${
-                    selectedYarnType === yarn
-                      ? 'bg-peach-200 text-warmbrown-900 font-bold shadow-xs'
-                      : 'hover:bg-peach-50 text-warmbrown-700'
-                  }`}
-                >
-                  <span>{yarn === 'All' ? 'All Materials' : yarn}</span>
-                  <span className="opacity-70">{count}</span>
-                </button>
-              );
-            }
-          )}
-        </div>
-      </div>
-
-      {/* 4. DOLL SIZE FILTER */}
-      <div className="space-y-2 pt-3 border-t border-peach-100">
-        <label className="text-xs font-bold text-warmbrown-700 uppercase tracking-wider block">
-          Doll Size
-        </label>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {['All', 'Mini', 'Medium', 'Giant'].map((sz) => {
-            const count = facetedCounts.sizeCounts[sz] || 0;
-            return (
-              <button
-                key={sz}
-                onClick={() => {
-                  setSelectedSize(sz);
-                  if (isMobile) setIsMobileFilterOpen(false);
-                }}
-                className={`px-3 py-1.5 rounded-full font-semibold transition-all flex items-center gap-1.5 ${
-                  selectedSize === sz
-                    ? 'bg-warmbrown-800 text-white shadow-xs'
-                    : 'bg-peach-50 text-warmbrown-800 hover:bg-peach-100 border border-peach-200'
-                }`}
-              >
-                <span>{sz}</span>
-                <span className="opacity-75 text-[10px]">({count})</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 5. PRICE SLIDER FILTER */}
-      <div className="space-y-2 pt-3 border-t border-peach-100">
-        <div className="flex items-center justify-between text-xs font-bold text-warmbrown-700">
-          <span className="uppercase tracking-wider">Max Price</span>
-          <span className="text-warmbrown-800">${maxPrice.toFixed(2)}</span>
-        </div>
-        <input
-          type="range"
-          min="10"
-          max="65"
-          step="5"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(Number(e.target.value))}
-          className="w-full accent-warmbrown-700 cursor-pointer"
-        />
-        <div className="flex justify-between text-[10px] text-warmbrown-500">
-          <span>$10.00</span>
-          <span>$65.00</span>
-        </div>
-      </div>
-    </div>
-  );
+  const resetFilters = () => {
+    setSearchInput('');
+    updateCatalogParams({
+      productType: null,
+      theme: null,
+      category: null,
+      yarnType: null,
+      size: null,
+      search: null,
+      maxPrice: null,
+      sort: null,
+      page: null,
+    });
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Page Header Banner */}
-      <div className="bg-gradient-to-r from-peach-100 via-peach-50 to-white p-6 sm:p-8 rounded-3xl border border-peach-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-extrabold text-warmbrown-800">
-            {selectedProductType !== 'All' && selectedTheme !== 'All'
-              ? `${selectedTheme} ${selectedProductType}`
-              : selectedProductType !== 'All'
-              ? `${selectedProductType} Collection`
-              : selectedTheme !== 'All'
-              ? `${selectedTheme} Handcrafted Items`
-              : 'All Handcrafted Collections'}
-          </h1>
-          <p className="text-xs sm:text-sm text-warmbrown-600">
-            Showing {filteredProducts.length} unique artisan crochet products
-            {searchParam && ` matching "${searchParam}"`}
-          </p>
-        </div>
-
-        {/* Mobile Filter Toggle Button */}
-        <button
-          onClick={() => setIsMobileFilterOpen(true)}
-          className="lg:hidden bg-warmbrown-800 text-white px-4 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-warmbrown-900 transition-colors"
-        >
-          <SlidersHorizontal size={16} />
-          <span>Filters ({filteredProducts.length})</span>
-        </button>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* 1. Header Headline */}
+      <div>
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-warmbrown-800 dark:text-peach-100 tracking-tight">
+          Our Collections
+        </h1>
       </div>
 
-      {/* Main Listing Grid & Sidebar Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Desktop Left Sidebar */}
-        <aside className="hidden lg:block bg-white p-6 rounded-3xl border border-peach-200/80 shadow-soft h-fit sticky top-24">
-          {renderFilterSidebar(false)}
-        </aside>
-
-        {/* Mobile Filter Drawer Modal */}
-        {isMobileFilterOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden flex justify-end bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="w-full max-w-xs bg-white h-full p-6 overflow-y-auto space-y-6 shadow-2xl animate-in slide-in-from-right duration-300 relative">
+      {/* 2. Top Filter Controls (3 Input Columns: Search, Price, Sort) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        {/* Search Input */}
+        <div className="space-y-1">
+          <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
+            <span>Search</span>
+            {searchInput && (
               <button
-                onClick={() => setIsMobileFilterOpen(false)}
-                className="absolute top-4 right-4 text-warmbrown-600 hover:text-warmbrown-900 p-1 rounded-full bg-peach-50"
+                type="button"
+                onClick={() => {
+                  setSearchInput('');
+                  updateCatalogParams({ search: null });
+                }}
+                className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
               >
-                <X size={20} />
+                Clear
               </button>
-              {renderFilterSidebar(true)}
+            )}
+          </div>
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                searchDebounceRef.current = setTimeout(() => {
+                  updateCatalogParams({ search: e.target.value.trim() || null });
+                }, 350);
+              }}
+              placeholder="Enter product name..."
+              className="w-full bg-white dark:bg-[#1F1610] border border-peach-200 dark:border-warmbrown-800 rounded-xl px-3.5 py-2.5 text-xs text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-500 outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 shadow-xs"
+            />
+            <Search size={14} className="absolute right-3.5 text-warmbrown-400 dark:text-peach-300/60 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Price Filter Dropdown */}
+        <div className="space-y-1">
+          <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
+            <span>Price</span>
+            {catalogParams.maxPrice < MAX_CATALOG_PRICE && (
               <button
-                onClick={() => setIsMobileFilterOpen(false)}
-                className="w-full bg-warmbrown-800 text-white py-3 rounded-2xl text-xs font-bold shadow-md hover:bg-warmbrown-900 transition-colors"
+                type="button"
+                onClick={() => updateCatalogParams({ maxPrice: null })}
+                className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
               >
-                Apply Filters ({filteredProducts.length} items)
+                Clear
               </button>
-            </div>
+            )}
           </div>
-        )}
+          <CustomSelect
+            value={catalogParams.maxPrice}
+            onChange={(val) => updateCatalogParams({ maxPrice: Number(val) >= MAX_CATALOG_PRICE ? null : Number(val) })}
+            options={[
+              { value: MAX_CATALOG_PRICE, label: 'All Prices' },
+              { value: 20, label: 'Under ₹20.00' },
+              { value: 35, label: 'Under ₹35.00' },
+              { value: 50, label: 'Under ₹50.00' },
+            ]}
+          />
+        </div>
 
-        {/* Right Main Content */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Active Tags Bar & Sort Dropdown */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-peach-200/80 shadow-xs">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="font-bold text-warmbrown-500">Active:</span>
-              {selectedProductType !== 'All' && (
-                <span className="bg-peach-100 text-warmbrown-800 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 border border-peach-200">
-                  Type: {selectedProductType}
-                  <X
-                    size={12}
-                    className="cursor-pointer hover:rotate-90 transition-transform duration-300"
-                    onClick={() => setSelectedProductType('All')}
-                  />
-                </span>
-              )}
-              {selectedTheme !== 'All' && (
-                <span className="bg-peach-100 text-warmbrown-800 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 border border-peach-200">
-                  Theme: {selectedTheme}
-                  <X
-                    size={12}
-                    className="cursor-pointer hover:rotate-90 transition-transform duration-300"
-                    onClick={() => setSelectedTheme('All')}
-                  />
-                </span>
-              )}
-              {selectedYarnType !== 'All' && (
-                <span className="bg-peach-100 text-warmbrown-800 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 border border-peach-200">
-                  Yarn: {selectedYarnType}
-                  <X
-                    size={12}
-                    className="cursor-pointer hover:rotate-90 transition-transform duration-300"
-                    onClick={() => setSelectedYarnType('All')}
-                  />
-                </span>
-              )}
-              {selectedSize !== 'All' && (
-                <span className="bg-peach-100 text-warmbrown-800 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 border border-peach-200">
-                  Size: {selectedSize}
-                  <X
-                    size={12}
-                    className="cursor-pointer hover:rotate-90 transition-transform duration-300"
-                    onClick={() => setSelectedSize('All')}
-                  />
-                </span>
-              )}
-              {hasActiveFilters ? (
-                <button
-                  onClick={resetFilters}
-                  className="text-xs font-bold text-rose-600 hover:text-rose-800 underline ml-1"
-                >
-                  Clear All
-                </button>
-              ) : (
-                <span className="text-warmbrown-400 italic">No extra filters applied</span>
-              )}
-            </div>
-
-            {/* Sort Dropdown Selector */}
-            <div className="flex items-center gap-2 text-xs self-end sm:self-auto">
-              <label className="font-bold text-warmbrown-700 shrink-0">Sort By:</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-peach-50 border border-peach-200 rounded-xl px-3 py-1.5 text-xs text-warmbrown-800 font-semibold outline-none focus:border-warmbrown-500 cursor-pointer"
-              >
-                <option value="featured">Featured / Popular</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Highest Rated</option>
-                <option value="newest">Newest Additions</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Product Cards Grid */}
-          {filteredProducts.length > 0 ? (
-            <StaggeredGrid className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </StaggeredGrid>
-          ) : (
-            <div className="bg-white rounded-3xl p-12 text-center border border-peach-200 space-y-4">
-              <span className="text-6xl block">🧶</span>
-              <h3 className="text-xl font-bold text-warmbrown-800">No Products Found</h3>
-              <p className="text-xs text-warmbrown-600 max-w-sm mx-auto">
-                We couldn&apos;t find any items matching your active combination of filters. Try clearing some criteria or request a custom order!
-              </p>
+        {/* Sort By Dropdown */}
+        <div className="space-y-1">
+          <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
+            <span>Sort By</span>
+            {catalogParams.sort !== 'featured' && (
               <button
-                onClick={resetFilters}
-                className="bg-warmbrown-800 text-white px-5 py-2.5 rounded-full text-xs font-bold hover:bg-warmbrown-900 transition-colors shadow-sm"
+                type="button"
+                onClick={() => updateCatalogParams({ sort: null })}
+                className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
               >
-                Reset All Filters
+                Clear
+              </button>
+            )}
+          </div>
+          <CustomSelect
+            value={catalogParams.sort}
+            onChange={(val) => updateCatalogParams({ sort: String(val) === 'featured' ? null : String(val) })}
+            options={[
+              { value: 'featured', label: 'Featured / Popular' },
+              { value: 'price-low', label: 'Price: Low to High' },
+              { value: 'price-high', label: 'Price: High to Low' },
+              { value: 'rating', label: 'Highest Rated' },
+              { value: 'newest', label: 'Newest Additions' },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* 3. Horizontal Category Navigation Tabs Bar */}
+      <div className="border-b border-peach-200 dark:border-warmbrown-800 overflow-x-auto scrollbar-none flex items-center gap-6 sm:gap-10 text-xs font-bold uppercase tracking-wider pt-2">
+        <button
+          type="button"
+          onClick={() => updateCatalogParams({ theme: null, category: null, productType: null })}
+          className={`pb-3.5 whitespace-nowrap transition-colors border-b-2 ${
+            catalogParams.theme === 'All' && catalogParams.productType === 'All'
+              ? 'border-warmbrown-800 dark:border-peach-300 text-warmbrown-900 dark:text-peach-100 font-extrabold'
+              : 'border-transparent text-warmbrown-500 dark:text-peach-300/60 hover:text-warmbrown-800 dark:hover:text-peach-100'
+          }`}
+        >
+          All Collections ({pagination.total})
+        </button>
+
+        {designThemesList.map((theme) => (
+          <button
+            key={theme._id || theme.id}
+            type="button"
+            onClick={() => updateCatalogParams({ theme: theme.name })}
+            className={`pb-3.5 whitespace-nowrap transition-colors border-b-2 flex items-center gap-2 ${
+              catalogParams.theme === theme.name
+                ? 'border-warmbrown-800 dark:border-peach-300 text-warmbrown-900 dark:text-peach-100 font-extrabold'
+                : 'border-transparent text-warmbrown-500 dark:text-peach-300/60 hover:text-warmbrown-800 dark:hover:text-peach-100'
+            }`}
+          >
+            <span>{theme.icon}</span>
+            <span>{theme.name}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* 4. Active Filters Reset Bar (If filters applied) */}
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between bg-peach-50 dark:bg-[#1F1610] p-3 px-4 rounded-xl border border-peach-200 dark:border-warmbrown-800 text-xs">
+          <div className="flex items-center gap-2 text-warmbrown-700 dark:text-peach-200 font-medium">
+            <span>Filtering by:</span>
+            {catalogParams.theme !== 'All' && <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">{catalogParams.theme}</span>}
+            {catalogParams.search && <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">“{catalogParams.search}”</span>}
+            {catalogParams.maxPrice < MAX_CATALOG_PRICE && <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">Under ₹{catalogParams.maxPrice}</span>}
+          </div>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="text-rose-600 dark:text-rose-400 font-bold hover:underline"
+          >
+            Reset All Filters
+          </button>
+        </div>
+      )}
+
+      {/* 5. Product Grid & Empty State */}
+      {catalogError ? (
+        <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-12 text-center border border-peach-200 dark:border-warmbrown-800 space-y-4">
+          <h3 className="text-xl font-bold text-warmbrown-800 dark:text-peach-100">Unable to load products.</h3>
+          <button
+            type="button"
+            onClick={() => setCatalogRetry((v) => v + 1)}
+            className="bg-warmbrown-800 dark:bg-warmbrown-700 text-white px-6 py-2.5 rounded-full text-xs font-bold hover:bg-warmbrown-900 transition-colors shadow-sm"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : isCatalogLoading && products.length === 0 ? (
+        <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-16 text-center border border-peach-200 dark:border-warmbrown-800 flex flex-col items-center gap-3">
+          <Loader2 size={32} className="animate-spin text-warmbrown-600 dark:text-peach-300" />
+          <p className="text-sm font-semibold text-warmbrown-700 dark:text-peach-200">Loading catalog items...</p>
+        </div>
+      ) : products.length > 0 ? (
+        <div className="space-y-8">
+          <StaggeredGrid className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 ${isCatalogLoading ? 'opacity-60' : ''}`}>
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </StaggeredGrid>
+
+          {/* Pagination Navigation Controls */}
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => updateCatalogParams({ page: catalogParams.page - 1 })}
+                disabled={catalogParams.page <= 1 || isCatalogLoading}
+                className="inline-flex items-center gap-1 rounded-full border border-peach-200 dark:border-warmbrown-800 bg-white dark:bg-[#1F1610] px-4 py-2 text-xs font-bold text-warmbrown-700 dark:text-peach-200 hover:bg-peach-50 dark:hover:bg-warmbrown-900 transition-colors disabled:opacity-50"
+              >
+                <ChevronLeft size={15} /> Previous
+              </button>
+
+              <span className="text-xs font-bold text-warmbrown-700 dark:text-peach-200">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => updateCatalogParams({ page: catalogParams.page + 1 })}
+                disabled={catalogParams.page >= pagination.totalPages || isCatalogLoading}
+                className="inline-flex items-center gap-1 rounded-full border border-peach-200 dark:border-warmbrown-800 bg-white dark:bg-[#1F1610] px-4 py-2 text-xs font-bold text-warmbrown-700 dark:text-peach-200 hover:bg-peach-50 dark:hover:bg-warmbrown-900 transition-colors disabled:opacity-50"
+              >
+                Next <ChevronRight size={15} />
               </button>
             </div>
           )}
         </div>
-      </div>
+      ) : (
+        /* Empty State Safeguard when filters match 0 products */
+        <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-12 text-center border border-peach-200 dark:border-warmbrown-800 space-y-4 my-6 shadow-xs">
+          <span className="text-6xl block">🧶</span>
+          <h3 className="text-xl font-extrabold text-warmbrown-800 dark:text-peach-100">
+            No products found matching active filters
+          </h3>
+          <p className="text-xs sm:text-sm text-warmbrown-600 dark:text-peach-200/70 max-w-md mx-auto leading-relaxed">
+            {catalogParams.search ? (
+              <>No items match search term <span className="font-bold text-warmbrown-800 dark:text-peach-100">“{catalogParams.search}”</span> under category <span className="font-bold text-warmbrown-800 dark:text-peach-100">{catalogParams.theme}</span>.</>
+            ) : (
+              <>No items found in <span className="font-bold text-warmbrown-800 dark:text-peach-100">{catalogParams.theme}</span> matching your price filter.</>
+            )}
+          </p>
+          <div className="pt-2 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="bg-warmbrown-800 dark:bg-warmbrown-700 hover:bg-warmbrown-900 text-white px-7 py-3 rounded-full text-xs font-bold transition-colors shadow-md"
+            >
+              View All {pagination.total} Handcrafted Products
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function CollectionsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-12 text-center text-warmbrown-700">Loading collection...</div>
-      }
-    >
+    <Suspense fallback={<div className="p-12 text-center text-warmbrown-700 dark:text-peach-200">Loading catalog collections...</div>}>
       <CollectionsContent />
     </Suspense>
   );

@@ -221,10 +221,13 @@ export const Footer: React.FC = () => {
               <p className="text-[11px] text-peach-300/70">
                 Quick WhatsApp chat available for custom consultations 7 days a week.
               </p>
-              <p className="flex items-center gap-2">
+              <a
+                href="mailto:craftywrap30@gmail.com"
+                className="flex items-center gap-2 text-peach-200 hover:text-white transition-colors hover:underline"
+              >
                 <Mail size={15} className="text-peach-300 shrink-0" />
-                <span>hello@craftywrap.shop</span>
-              </p>
+                <span>craftywrap30@gmail.com</span>
+              </a>
               <div className="pt-2">
                 <span className="block text-[11px] font-bold text-peach-300 uppercase tracking-wider mb-1">
                   Accepted Payments

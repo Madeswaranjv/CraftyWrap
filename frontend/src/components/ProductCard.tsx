@@ -4,9 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { CatalogProduct } from '@/lib/catalog';
-import { StarRating } from './StarRating';
 import { YarnSpinner } from './motion/YarnSpinner';
-import { Heart, ShoppingBag, Clock } from 'lucide-react';
+import { Heart, Plus } from 'lucide-react';
 
 interface ProductCardProps {
   product: CatalogProduct;
@@ -57,112 +56,87 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   return (
-    <div className="group bg-white rounded-3xl border border-peach-100/90 shadow-soft hover:shadow-hover transition-all duration-300 flex flex-col justify-between overflow-hidden relative">
-      {/* Top Badges & Wishlist Button */}
-      <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">
-        <div className="flex flex-col gap-1 pointer-events-auto">
-          {product.isBestSeller && (
-            <span className="bg-warmbrown-800 text-peach-100 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">
-              Best Seller
-            </span>
-          )}
-          {product.isNew && (
-            <span className="bg-peach-300 text-warmbrown-900 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">
-              New Drop
-            </span>
-          )}
-          {product.stockCount <= 4 && (
-            <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200">
-              Only {product.stockCount} left
-            </span>
-          )}
-        </div>
+    <div className="group bg-white dark:bg-[#1F1610] rounded-2xl border border-peach-200/60 dark:border-warmbrown-900/80 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden relative">
+      {/* Top Media Image Container */}
+      <div className="relative w-full aspect-square bg-gradient-to-br from-peach-100/60 via-amber-50/40 to-rose-50/30 dark:from-[#2A1D15] dark:via-[#231810] dark:to-[#1C130D] overflow-hidden flex items-center justify-center p-6 border-b border-peach-100/60 dark:border-warmbrown-900/60">
+        {/* Sale / Best Seller Tag Badge */}
+        {product.isBestSeller ? (
+          <span className="absolute top-3 left-3 bg-rose-500 text-white font-extrabold text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-sm shadow-xs z-10">
+            SALE
+          </span>
+        ) : product.isNew ? (
+          <span className="absolute top-3 left-3 bg-amber-600 text-white font-extrabold text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-sm shadow-xs z-10">
+            NEW
+          </span>
+        ) : (
+          <span className="absolute top-3 left-3 bg-warmbrown-800 text-peach-100 font-extrabold text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-sm shadow-xs z-10">
+            HANDMADE
+          </span>
+        )}
 
+        {/* Wishlist Heart Icon */}
         <button
           onClick={(e) => {
             e.preventDefault();
             void toggleWishlist(targetId);
           }}
-          className={`pointer-events-auto w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+          className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${
             isWishlisted
               ? 'bg-rose-500 text-white shadow-md'
-              : 'bg-white/90 backdrop-blur-md text-warmbrown-600 hover:text-rose-500 shadow-sm hover:scale-110'
+              : 'bg-white/80 dark:bg-warmbrown-900/80 text-warmbrown-700 dark:text-peach-200 shadow-xs hover:bg-white'
           }`}
           title="Save to Wishlist"
         >
-          <Heart size={16} className={isWishlisted ? 'fill-white' : ''} />
+          <Heart size={15} className={isWishlisted ? 'fill-white' : ''} />
         </button>
+
+        {/* Product Visual Icon / Artwork */}
+        <Link href={`/products/${product.id}`} prefetch={true} className="w-full h-full flex items-center justify-center">
+          <span className="text-7xl group-hover:scale-110 transition-transform duration-300 drop-shadow-md select-none">
+            {renderIcon(product.imageIconName)}
+          </span>
+        </Link>
       </div>
 
-      {/* Main Image Container */}
-      <Link href={`/products/${product.id}`} className="block relative pt-4 px-4">
-        <div
-          className={`w-full aspect-[4/3] rounded-2xl bg-gradient-to-br ${product.imageBg} flex items-center justify-center relative overflow-hidden group-hover:scale-[1.02] transition-transform duration-300`}
-        >
-          {/* Subtle background yarn ball pattern watermark */}
-          <div className="absolute inset-0 opacity-10 flex items-center justify-center text-7xl select-none">
-            🧶
-          </div>
-
-          <div className="relative z-10 text-center space-y-1">
-            <span className="text-6xl drop-shadow-md block transform group-hover:scale-110 transition-transform duration-300">
-              {renderIcon(product.imageIconName)}
-            </span>
-            <span className="inline-block bg-white/70 backdrop-blur-md text-warmbrown-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-xs">
-              {product.yarnType}
-            </span>
-          </div>
-        </div>
-      </Link>
-
-      {/* Card Content Details */}
-      <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-warmbrown-500 font-medium">
-            <span>{product.productType ? `${product.productType} • ${product.designTheme}` : product.category}</span>
-            <span className="flex items-center gap-1 text-[11px] text-warmbrown-600">
-              <Clock size={11} /> {product.prepTimeDays}d prep
-            </span>
-          </div>
-
-          <Link href={`/products/${product.id}`}>
-            <h3 className="font-bold text-warmbrown-800 text-base group-hover:text-warmbrown-600 transition-colors line-clamp-1">
+      {/* Product Details Section */}
+      <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+        <div className="space-y-1">
+          <Link href={`/products/${product.id}`} prefetch={true} className="block">
+            <h3 className="font-extrabold uppercase text-warmbrown-800 dark:text-peach-100 text-sm tracking-tight group-hover:text-warmbrown-600 dark:group-hover:text-peach-300 transition-colors line-clamp-1">
               {product.name}
             </h3>
           </Link>
-
-          <StarRating rating={product.rating} count={product.reviewCount} />
+          <p className="text-[11px] text-warmbrown-500 dark:text-peach-300/60 font-medium truncate">
+            {product.yarnType} • {product.size}
+          </p>
         </div>
 
-        {/* Price & Add to Cart Action */}
-        <div className="pt-2 border-t border-peach-100 flex items-center justify-between gap-2">
-          <div className="flex flex-col">
+        {/* Pricing & Add Action Button */}
+        <div className="pt-2 flex items-center justify-between border-t border-peach-100/60 dark:border-warmbrown-900/60">
+          <div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-extrabold text-warmbrown-800">
-                ${product.price.toFixed(2)}
+              <span className="text-base font-extrabold text-warmbrown-800 dark:text-peach-100">
+                ₹{product.price.toFixed(2)}
               </span>
               {product.originalPrice && (
-                <span className="text-xs text-warmbrown-400 line-through font-normal">
-                  ${product.originalPrice.toFixed(2)}
+                <span className="text-xs text-warmbrown-400 dark:text-peach-300/50 line-through font-normal">
+                  ₹{product.originalPrice.toFixed(2)}
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-warmbrown-500/80 font-medium">
-              Hand-embroidered
+            <span className="text-[10px] text-warmbrown-500/80 dark:text-peach-300/60 font-semibold block">
+              100% Hand-crocheted
             </span>
           </div>
 
           <button
+            type="button"
             onClick={handleAddToCart}
             disabled={isAdding}
-            className="bg-peach-100 hover:bg-warmbrown-800 text-warmbrown-800 hover:text-white px-3.5 py-2 rounded-full font-bold text-xs transition-all duration-200 flex items-center gap-1.5 shadow-xs border border-peach-200/80 disabled:opacity-75"
+            className="bg-warmbrown-800 dark:bg-warmbrown-700 hover:bg-warmbrown-900 dark:hover:bg-warmbrown-600 text-white p-2.5 rounded-xl font-bold text-xs transition-all shadow-xs flex items-center justify-center shrink-0 disabled:opacity-50"
+            title="Add to Shopping Cart"
           >
-            {isAdding ? (
-              <YarnSpinner size={14} />
-            ) : (
-              <ShoppingBag size={14} />
-            )}
-            <span>{isAdding ? 'Adding' : 'Add'}</span>
+            {isAdding ? <YarnSpinner size={14} /> : <Plus size={16} />}
           </button>
         </div>
       </div>

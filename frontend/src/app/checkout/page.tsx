@@ -36,9 +36,10 @@ export default function CheckoutPage() {
   const [city, setCity] = useState('Bangalore');
   const [pincode, setPincode] = useState('560001');
 
+  const safeSubtotal = Number.isNaN(Number(subtotal)) ? 0 : Number(subtotal);
   const giftWrapFee = giftWrap ? 4.99 : 0;
-  const shippingFee = subtotal > 50 ? 0 : 5.99;
-  const total = subtotal + giftWrapFee + shippingFee;
+  const shippingFee = safeSubtotal > 50 || cart.length === 0 ? 0 : 5.99;
+  const total = safeSubtotal + giftWrapFee + shippingFee;
 
   const upiId = 'craftywrap@upi';
   const upiDeepLink = `upi://pay?pa=${upiId}&pn=CraftyWrap&am=${total.toFixed(2)}&cu=INR`;
@@ -147,7 +148,7 @@ export default function CheckoutPage() {
               ) : (
                 <>
                   We&apos;ve noted your order (<span className="font-bold text-warmbrown-800">#{placedOrder.id}</span>). Once we confirm your UPI payment of{' '}
-                  <span className="font-bold text-warmbrown-900">${placedOrder.total.toFixed(2)}</span>, we&apos;ll start preparing your handmade doll and update your order status. This usually takes a few hours.
+                  <span className="font-bold text-warmbrown-900">₹{placedOrder.total.toFixed(2)}</span>, we&apos;ll start preparing your handmade doll and update your order status. This usually takes a few hours.
                 </>
               )}
             </p>
@@ -186,7 +187,7 @@ export default function CheckoutPage() {
               </div>
 
               <p className="text-[11px] text-amber-900 font-medium max-w-sm">
-                Pay exact amount <strong className="text-warmbrown-900">${placedOrder.total.toFixed(2)}</strong> via GPay, PhonePe, Paytm, or any UPI app.
+                Pay exact amount <strong className="text-warmbrown-900">₹{placedOrder.total.toFixed(2)}</strong> via GPay, PhonePe, Paytm, or any UPI app.
               </p>
             </div>
           </div>
@@ -220,7 +221,7 @@ export default function CheckoutPage() {
             <p className="flex justify-between">
               <strong className="text-warmbrown-800">Total Amount:</strong>
               <span className="font-extrabold text-warmbrown-900 text-sm">
-                ${placedOrder.total.toFixed(2)}
+                ₹{placedOrder.total.toFixed(2)}
               </span>
             </p>
             <p className="flex justify-between items-center pt-1">
@@ -264,76 +265,76 @@ export default function CheckoutPage() {
         {/* Left Column: Address & Payment Selection */}
         <div className="lg:col-span-7 space-y-6">
           {/* Shipping Address Section */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-peach-200/80 shadow-soft space-y-4">
-            <h3 className="font-extrabold text-warmbrown-800 text-lg flex items-center gap-2 border-b border-peach-100 pb-3">
-              <Truck size={20} className="text-warmbrown-600" />
+          <div className="bg-white dark:bg-[#1F1610] p-6 sm:p-8 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft space-y-4">
+            <h3 className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg flex items-center gap-2 border-b border-peach-100 dark:border-warmbrown-900 pb-3">
+              <Truck size={20} className="text-warmbrown-600 dark:text-peach-300" />
               1. Shipping Address
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-warmbrown-700 block mb-1">Full Name *</label>
+                <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full bg-peach-50 border border-peach-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600"
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-warmbrown-700 block mb-1">Phone Number *</label>
+                <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">Phone Number *</label>
                 <input
                   type="text"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full bg-peach-50 border border-peach-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600"
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-warmbrown-700 block mb-1">Delivery Address *</label>
+              <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">Delivery Address *</label>
               <input
                 type="text"
                 required
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full bg-peach-50 border border-peach-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600"
+                className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-warmbrown-700 block mb-1">City *</label>
+                <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">City *</label>
                 <input
                   type="text"
                   required
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full bg-peach-50 border border-peach-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600"
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-warmbrown-700 block mb-1">Pincode / Postal Code *</label>
+                <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">Pincode / Postal Code *</label>
                 <input
                   type="text"
                   required
                   value={pincode}
                   onChange={(e) => setPincode(e.target.value)}
-                  className="w-full bg-peach-50 border border-peach-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600"
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>
             </div>
           </div>
 
           {/* Payment Method Selector Section */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-peach-200/80 shadow-soft space-y-5">
-            <h3 className="font-extrabold text-warmbrown-800 text-lg flex items-center gap-2 border-b border-peach-100 pb-3">
-              <Lock size={18} className="text-warmbrown-600" />
+          <div className="bg-white dark:bg-[#1F1610] p-6 sm:p-8 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft space-y-5">
+            <h3 className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg flex items-center gap-2 border-b border-peach-100 dark:border-warmbrown-900 pb-3">
+              <Lock size={18} className="text-warmbrown-600 dark:text-peach-300" />
               2. Select Payment Method
             </h3>
 
@@ -344,19 +345,19 @@ export default function CheckoutPage() {
                 onClick={() => setPaymentMethod('razorpay')}
                 className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-3 ${
                   paymentMethod === 'razorpay'
-                    ? 'border-warmbrown-800 bg-peach-50/80 shadow-sm ring-2 ring-warmbrown-800/10'
-                    : 'border-peach-200 hover:border-peach-300 bg-white'
+                    ? 'border-warmbrown-800 dark:border-peach-300 bg-peach-50/80 dark:bg-warmbrown-900/80 shadow-sm ring-2 ring-warmbrown-800/10'
+                    : 'border-peach-200 dark:border-warmbrown-800 hover:border-peach-300 bg-white dark:bg-[#251A13]'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <CreditCard size={24} className={paymentMethod === 'razorpay' ? 'text-warmbrown-800' : 'text-warmbrown-400'} />
+                  <CreditCard size={24} className={paymentMethod === 'razorpay' ? 'text-warmbrown-800 dark:text-peach-300' : 'text-warmbrown-400'} />
                   {paymentMethod === 'razorpay' && (
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                   )}
                 </div>
                 <div>
-                  <span className="font-bold text-warmbrown-800 text-xs block">Pay Online</span>
-                  <span className="text-[10px] text-warmbrown-500 font-medium">Razorpay / Instant Paid</span>
+                  <span className="font-bold text-warmbrown-800 dark:text-peach-100 text-xs block">Pay Online</span>
+                  <span className="text-[10px] text-warmbrown-500 dark:text-peach-200/70 font-medium">Razorpay / Instant Paid</span>
                 </div>
               </button>
 
@@ -366,19 +367,19 @@ export default function CheckoutPage() {
                 onClick={() => setPaymentMethod('upi_manual')}
                 className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-3 ${
                   paymentMethod === 'upi_manual'
-                    ? 'border-warmbrown-800 bg-peach-50/80 shadow-sm ring-2 ring-warmbrown-800/10'
-                    : 'border-peach-200 hover:border-peach-300 bg-white'
+                    ? 'border-warmbrown-800 dark:border-peach-300 bg-peach-50/80 dark:bg-warmbrown-900/80 shadow-sm ring-2 ring-warmbrown-800/10'
+                    : 'border-peach-200 dark:border-warmbrown-800 hover:border-peach-300 bg-white dark:bg-[#251A13]'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <QrCode size={24} className={paymentMethod === 'upi_manual' ? 'text-warmbrown-800' : 'text-warmbrown-400'} />
+                  <QrCode size={24} className={paymentMethod === 'upi_manual' ? 'text-warmbrown-800 dark:text-peach-300' : 'text-warmbrown-400'} />
                   {paymentMethod === 'upi_manual' && (
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
                   )}
                 </div>
                 <div>
-                  <span className="font-bold text-warmbrown-800 text-xs block">Pay via UPI</span>
-                  <span className="text-[10px] text-warmbrown-500 font-medium">Manual QR / Verification</span>
+                  <span className="font-bold text-warmbrown-800 dark:text-peach-100 text-xs block">Pay via UPI</span>
+                  <span className="text-[10px] text-warmbrown-500 dark:text-peach-200/70 font-medium">Manual QR / Verification</span>
                 </div>
               </button>
             </div>
@@ -433,7 +434,7 @@ export default function CheckoutPage() {
 
                 {/* Short Instruction Text */}
                 <p className="text-xs text-warmbrown-800 font-medium bg-white/70 p-2.5 rounded-xl border border-peach-200">
-                  Scan or pay to this UPI ID for <strong className="text-warmbrown-900">${total.toFixed(2)}</strong>, then tap <strong className="text-warmbrown-900">&quot;I&apos;ve Paid — Notify CraftyWrap&quot;</strong> below.
+                  Scan or pay to this UPI ID for <strong className="text-warmbrown-900">₹{total.toFixed(2)}</strong>, then tap <strong className="text-warmbrown-900">&quot;I&apos;ve Paid — Notify CraftyWrap&quot;</strong> below.
                 </p>
               </div>
             )}
@@ -442,8 +443,8 @@ export default function CheckoutPage() {
 
         {/* Right Column: Order Summary & Place Order Action */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white p-6 rounded-3xl border border-peach-200/80 shadow-card space-y-4 sticky top-24">
-            <h3 className="font-extrabold text-warmbrown-800 text-lg border-b border-peach-100 pb-3">
+          <div className="bg-white dark:bg-[#1F1610] p-6 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-card space-y-4 sticky top-24">
+            <h3 className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg border-b border-peach-100 dark:border-warmbrown-900 pb-3">
               Order Items ({cart.length})
             </h3>
 
@@ -452,41 +453,41 @@ export default function CheckoutPage() {
                 {cart.map((item) => (
                   <div key={item.product.id} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-warmbrown-800">{item.quantity}x</span>
-                      <span className="text-warmbrown-700 truncate max-w-[160px]">
+                      <span className="font-bold text-warmbrown-800 dark:text-peach-100">{item.quantity}x</span>
+                      <span className="text-warmbrown-700 dark:text-peach-200 truncate max-w-[160px]">
                         {item.product.name}
                       </span>
                     </div>
-                    <span className="font-bold text-warmbrown-800">
-                      ${(item.product.price * item.quantity).toFixed(2)}
+                    <span className="font-bold text-warmbrown-800 dark:text-peach-100">
+                      ₹{((Number.isNaN(Number(item.product.price)) ? 0 : item.product.price) * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-warmbrown-500 italic py-2 text-center">
+              <p className="text-xs text-warmbrown-500 dark:text-peach-300/60 italic py-2 text-center">
                 Your cart is empty.
               </p>
             )}
 
-            <div className="border-t border-peach-100 pt-3 space-y-2 text-xs text-warmbrown-700">
+            <div className="border-t border-peach-100 dark:border-warmbrown-900 pt-3 space-y-2 text-xs text-warmbrown-700 dark:text-peach-200">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="font-bold">${subtotal.toFixed(2)}</span>
+                <span className="font-bold">₹{(Number.isNaN(Number(subtotal)) ? 0 : subtotal).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span className="font-bold">{shippingFee === 0 ? 'FREE' : `$${shippingFee.toFixed(2)}`}</span>
+                <span className="font-bold">{shippingFee === 0 ? 'FREE' : `₹${shippingFee.toFixed(2)}`}</span>
               </div>
               {giftWrap && (
                 <div className="flex justify-between">
                   <span>Gift Wrapping</span>
-                  <span className="font-bold">${giftWrapFee.toFixed(2)}</span>
+                  <span className="font-bold">₹{giftWrapFee.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-base font-extrabold text-warmbrown-800 border-t border-peach-200 pt-3">
+              <div className="flex justify-between text-base font-extrabold text-warmbrown-800 dark:text-peach-100 border-t border-peach-200 dark:border-warmbrown-800 pt-3">
                 <span>Total Amount</span>
-                <span>${total.toFixed(2)}</span>
+                <span>₹{(Number.isNaN(Number(total)) ? 0 : total).toFixed(2)}</span>
               </div>
             </div>
 
@@ -505,12 +506,12 @@ export default function CheckoutPage() {
               ) : paymentMethod === 'upi_manual' ? (
                 <>
                   <CheckCircle2 size={16} />
-                  <span>I&apos;ve Paid — Notify CraftyWrap (${total.toFixed(2)})</span>
+                  <span>I&apos;ve Paid — Notify CraftyWrap (₹{total.toFixed(2)})</span>
                 </>
               ) : (
                 <>
                   <Lock size={16} />
-                  <span>Place Order — ${total.toFixed(2)}</span>
+                  <span>Place Order — ₹{total.toFixed(2)}</span>
                 </>
               )}
             </button>

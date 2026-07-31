@@ -100,16 +100,16 @@ export default function CartPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-peach-100 pb-4">
+      <div className="flex items-center justify-between border-b border-peach-100 dark:border-warmbrown-900 pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-warmbrown-800">Shopping Cart</h1>
-          <p className="text-xs text-warmbrown-600">
+          <h1 className="text-3xl font-extrabold text-warmbrown-800 dark:text-peach-100">Shopping Cart</h1>
+          <p className="text-xs text-warmbrown-600 dark:text-peach-200/70">
             {cart.reduce((acc, item) => acc + item.quantity, 0)} items in your cart
           </p>
         </div>
         <Link
           href="/collections"
-          className="text-xs font-bold text-warmbrown-600 hover:text-warmbrown-800 flex items-center gap-1"
+          className="text-xs font-bold text-warmbrown-600 dark:text-peach-200 hover:text-warmbrown-800 flex items-center gap-1"
         >
           <ChevronLeft size={14} /> Continue Shopping
         </Link>
@@ -121,7 +121,7 @@ export default function CartPage() {
           {cart.map((item) => (
             <div
               key={item.product.id}
-              className="bg-white p-4 sm:p-5 rounded-3xl border border-peach-200/80 shadow-soft flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              className="bg-white dark:bg-[#1F1610] p-4 sm:p-5 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
             >
               {/* Product Thumbnail & Details */}
               <div className="flex items-center gap-4">
@@ -145,43 +145,43 @@ export default function CartPage() {
                     <span>{item.product.size}</span>
                   </div>
                   <p className="text-xs font-bold text-warmbrown-800 sm:hidden">
-                    ${item.product.price.toFixed(2)} each
+                    ₹{item.product.price.toFixed(2)} each
                   </p>
                 </div>
               </div>
 
               {/* Quantity Stepper & Price & Remove */}
-              <div className="flex items-center justify-between w-full sm:w-auto gap-6 border-t sm:border-t-0 border-peach-100 pt-3 sm:pt-0">
-                <div className="flex items-center bg-peach-50 border border-peach-200 rounded-full p-1">
+              <div className="flex items-center justify-between w-full sm:w-auto gap-6 border-t sm:border-t-0 border-peach-100 dark:border-warmbrown-900 pt-3 sm:pt-0">
+                <div className="flex items-center bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 rounded-full p-1">
                   <button
                     onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                    className="w-7 h-7 rounded-full bg-white text-warmbrown-800 font-bold hover:bg-peach-200 transition-colors flex items-center justify-center text-xs"
+                    className="w-7 h-7 rounded-full bg-white dark:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-100 font-bold hover:bg-peach-200 dark:hover:bg-warmbrown-700 transition-colors flex items-center justify-center text-xs"
                   >
                     -
                   </button>
-                  <span className="w-8 text-center font-extrabold text-xs text-warmbrown-800">
+                  <span className="w-8 text-center font-extrabold text-xs text-warmbrown-800 dark:text-peach-100">
                     {item.quantity}
                   </span>
                   <button
                     onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                    className="w-7 h-7 rounded-full bg-white text-warmbrown-800 font-bold hover:bg-peach-200 transition-colors flex items-center justify-center text-xs"
+                    className="w-7 h-7 rounded-full bg-white dark:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-100 font-bold hover:bg-peach-200 dark:hover:bg-warmbrown-700 transition-colors flex items-center justify-center text-xs"
                   >
                     +
                   </button>
                 </div>
 
                 <div className="text-right">
-                  <span className="font-extrabold text-warmbrown-800 text-base block">
-                    ${(item.product.price * item.quantity).toFixed(2)}
+                  <span className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-base block">
+                    ₹{((Number.isNaN(Number(item.product.price)) ? 0 : item.product.price) * item.quantity).toFixed(2)}
                   </span>
-                  <span className="text-[10px] text-warmbrown-500 hidden sm:block">
-                    ${item.product.price.toFixed(2)} / ea
+                  <span className="text-[10px] text-warmbrown-500 dark:text-peach-300/60 hidden sm:block">
+                    ₹{(Number.isNaN(Number(item.product.price)) ? 0 : item.product.price).toFixed(2)} / ea
                   </span>
                 </div>
 
                 <button
                   onClick={() => removeFromCart(item.product.id)}
-                  className="text-warmbrown-400 hover:text-rose-600 p-2 rounded-full hover:bg-rose-50 transition-colors"
+                  className="text-warmbrown-400 dark:text-peach-300/60 hover:text-rose-600 dark:hover:text-rose-400 p-2 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors"
                   title="Remove Item"
                 >
                   <Trash2 size={18} />
@@ -191,7 +191,7 @@ export default function CartPage() {
           ))}
 
           {/* Gift Wrap & Gift Note Option Card */}
-          <div className="bg-peach-50/80 p-5 rounded-3xl border border-peach-200/80 space-y-3">
+          <div className="bg-peach-50/80 dark:bg-[#1F1610] p-5 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 space-y-3">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -199,15 +199,15 @@ export default function CartPage() {
                 onChange={(e) => setGiftWrap(e.target.checked)}
                 className="w-4 h-4 accent-warmbrown-700 rounded cursor-pointer"
               />
-              <div className="flex items-center gap-2 text-xs font-bold text-warmbrown-800">
-                <Gift size={16} className="text-peach-600" />
-                <span>Add Handcrafted Gift Wrapping & Custom Tag (+ $4.99)</span>
+              <div className="flex items-center gap-2 text-xs font-bold text-warmbrown-800 dark:text-peach-100">
+                <Gift size={16} className="text-peach-600 dark:text-peach-300" />
+                <span>Add Handcrafted Gift Wrapping & Custom Tag (+ ₹4.99)</span>
               </div>
             </label>
 
             {giftWrap && (
               <div className="pl-7 space-y-2 animate-in fade-in duration-200">
-                <label className="text-xs font-bold text-warmbrown-700 block">
+                <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block">
                   Write Your Handwritten Gift Note:
                 </label>
                 <textarea
@@ -215,7 +215,7 @@ export default function CartPage() {
                   value={giftNote}
                   onChange={(e) => setGiftNote(e.target.value)}
                   placeholder="e.g., Happy Birthday Chloe! Hope this cute bunny brings you joy. Love, Mom."
-                  className="w-full bg-white border border-peach-300 rounded-xl p-3 text-xs outline-none focus:border-warmbrown-600"
+                  className="w-full bg-white dark:bg-warmbrown-900/90 border border-peach-300 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl p-3 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>
             )}
@@ -224,8 +224,8 @@ export default function CartPage() {
 
         {/* Right Column: Summary Panel */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white p-6 rounded-3xl border border-peach-200/80 shadow-card space-y-4">
-            <h3 className="font-extrabold text-warmbrown-800 text-lg border-b border-peach-100 pb-3">
+          <div className="bg-white dark:bg-[#1F1610] p-6 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-card space-y-4">
+            <h3 className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg border-b border-peach-100 dark:border-warmbrown-900 pb-3">
               Order Summary
             </h3>
 
@@ -236,7 +236,7 @@ export default function CartPage() {
                 placeholder="Promo Code (Try: CRAFTY10)"
                 value={promoCodeInput}
                 onChange={(e) => setPromoCodeInput(e.target.value)}
-                className="bg-peach-50 border border-peach-200 rounded-xl px-3 py-2 text-xs w-full outline-none uppercase font-semibold"
+                className="bg-peach-50 dark:bg-warmbrown-900/60 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 placeholder:text-warmbrown-400 dark:placeholder:text-warmbrown-500 rounded-xl px-3 py-2 text-xs w-full outline-none uppercase font-semibold"
               />
               <button
                 type="submit"
@@ -248,7 +248,7 @@ export default function CartPage() {
 
             {promoApplied && (
               <div className="text-[11px] text-emerald-700 font-bold bg-emerald-100 p-2 rounded-lg">
-                Promo code applied! Saved ${discount.toFixed(2)}
+                Promo code applied! Saved ₹{discount.toFixed(2)}
               </div>
             )}
             {promoError && (
@@ -261,16 +261,16 @@ export default function CartPage() {
             <div className="space-y-2 text-xs text-warmbrown-700 border-t border-peach-100 pt-3">
               <div className="flex justify-between">
                 <span>Items Subtotal</span>
-                <span className="font-bold">${subtotal.toFixed(2)}</span>
+                <span className="font-bold">₹{subtotal.toFixed(2)}</span>
               </div>
 
               <div className="flex justify-between">
                 <span>Shipping Estimate</span>
                 <span className="font-bold">
                   {shippingFee === 0 ? (
-                    <span className="text-emerald-700">FREE ($50+ orders)</span>
+                    <span className="text-emerald-700">FREE (₹50+ orders)</span>
                   ) : (
-                    `$${shippingFee.toFixed(2)}`
+                    `₹${shippingFee.toFixed(2)}`
                   )}
                 </span>
               </div>
@@ -278,20 +278,20 @@ export default function CartPage() {
               {giftWrap && (
                 <div className="flex justify-between">
                   <span>Gift Packaging</span>
-                  <span className="font-bold">${giftWrapFee.toFixed(2)}</span>
+                  <span className="font-bold">₹{giftWrapFee.toFixed(2)}</span>
                 </div>
               )}
 
               {discount > 0 && (
                 <div className="flex justify-between text-emerald-700 font-bold">
                   <span>Discount</span>
-                  <span>-${discount.toFixed(2)}</span>
+                  <span>-₹{discount.toFixed(2)}</span>
                 </div>
               )}
 
-              <div className="flex justify-between text-base font-extrabold text-warmbrown-800 border-t border-peach-200 pt-3">
+              <div className="flex justify-between text-base font-extrabold text-warmbrown-800 dark:text-peach-100 border-t border-peach-200 dark:border-warmbrown-800 pt-3">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>₹{total.toFixed(2)}</span>
               </div>
             </div>
 

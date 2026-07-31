@@ -101,7 +101,16 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 function normalizeCart(remoteCart: RemoteCart): Pick<CartContextType, 'cart' | 'giftWrap' | 'giftNote' | 'promoCode'> {
   return {
-    cart: (remoteCart.items ?? []).map((item) => ({ ...item, product: toCatalogProduct(item.product) })),
+    cart: (remoteCart.items ?? []).map((item) => {
+      const rawPrice = Number(item.product?.price ?? (item as unknown as { price?: number }).price ?? 0);
+      const safePrice = Number.isNaN(rawPrice) ? 0 : rawPrice;
+      const product = toCatalogProduct({ ...item.product, price: safePrice });
+      return {
+        ...item,
+        product,
+        quantity: Number(item.quantity ?? 1),
+      };
+    }),
     giftWrap: Boolean(remoteCart.giftWrap),
     giftNote: remoteCart.giftNote ?? '',
     promoCode: remoteCart.promoCode ?? '',
@@ -331,8 +340,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = useMemo<CartContextType>(() => ({
     cart, addToCart, removeFromCart, updateQuantity, clearCart, refreshCart,
-    cartCount: cart.reduce((total, item) => total + item.quantity, 0),
-    subtotal: cart.reduce((total, item) => total + item.product.price * item.quantity, 0),
+    cartCount: cart.reduce((total, item) => total + (Number.isNaN(Number(item.quantity)) ? 0 : Number(item.quantity)), 0),
+    subtotal: cart.reduce((total, item) => {
+      const price = Number(item.product?.price ?? 0);
+      const qty = Number(item.quantity ?? 1);
+      const safePrice = Number.isNaN(price) ? 0 : price;
+      const safeQty = Number.isNaN(qty) ? 1 : qty;
+      return total + (safePrice * safeQty);
+    }, 0),
     giftWrap, setGiftWrap, giftNote, setGiftNote, promoCode, setPromoCode,
     user, authLoading, login, register, loginWithGoogle, updateProfile, logout,
     notification, setNotification, orders, refreshOrders, latestOrder, setLatestOrder, addOrder,

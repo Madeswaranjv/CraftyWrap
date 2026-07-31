@@ -60,23 +60,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[85vh] bg-gradient-to-br from-peach-100/60 via-peach-50/40 to-warmbrown-100/30 flex items-center justify-center p-4 sm:p-8">
+    <div className="min-h-[85vh] bg-gradient-to-br from-peach-100/60 via-peach-50/40 to-warmbrown-100/30 dark:from-[#1A120B] dark:via-[#140E0A] dark:to-[#1A120B] flex items-center justify-center p-4 sm:p-8">
       {/* Main Login Modal Card */}
-      <div className="bg-white rounded-3xl border border-peach-200/90 shadow-2xl overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 relative p-4 sm:p-6 gap-6">
+      <div className="bg-white dark:bg-[#1F1610] rounded-3xl border border-peach-200/90 dark:border-warmbrown-900/80 shadow-2xl overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 relative p-4 sm:p-6 gap-6">
         {/* Top-Right Close Button */}
         <Link
           href="/"
-          className="absolute top-6 right-6 z-20 text-warmbrown-400 hover:text-warmbrown-800 p-2 rounded-full hover:bg-peach-100/70 transition-all duration-300 group"
+          className="absolute top-6 right-6 z-20 text-warmbrown-400 dark:text-peach-300/60 hover:text-warmbrown-800 dark:hover:text-peach-100 p-2 rounded-full hover:bg-peach-100/70 dark:hover:bg-warmbrown-900 transition-all duration-300 group"
           title="Close"
         >
           <X size={20} className="transition-transform duration-500 group-hover:rotate-180" />
         </Link>
 
         {/* Left Column: Illustration & Brand Banner */}
-        <div className="md:col-span-6 bg-gradient-to-br from-peach-100 via-peach-50 to-warmbrown-100/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden min-h-[380px]">
+        <div className="md:col-span-6 bg-gradient-to-br from-peach-100 via-peach-50 to-warmbrown-100/50 dark:from-[#291C14] dark:via-[#221710] dark:to-[#1A120B] rounded-3xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden min-h-[380px]">
           {/* Brand Logo Header */}
           <div className="z-10 flex items-center gap-2">
-            <span className="font-extrabold text-xl tracking-tight text-warmbrown-800">
+            <span className="font-extrabold text-xl tracking-tight text-warmbrown-800 dark:text-peach-100">
               CraftyWrap.
             </span>
           </div>
@@ -139,11 +139,11 @@ export default function LoginPage() {
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             {/* Email Input Field */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-warmbrown-800 block">
+              <label className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 block">
                 Email
               </label>
               <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-warmbrown-500">
+                <div className="absolute left-3.5 text-warmbrown-500 dark:text-peach-300/60">
                   <Mail size={16} />
                 </div>
                 <input
@@ -152,18 +152,18 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="daniel21fisher@gmail.com"
-                  className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-10 pr-4 py-2.5 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  className="w-full bg-white dark:bg-warmbrown-900/90 border border-peach-300 dark:border-warmbrown-800 focus:border-warmbrown-600 dark:focus:border-peach-300 rounded-xl pl-10 pr-4 py-2.5 text-xs text-warmbrown-900 dark:text-peach-100 font-medium placeholder-warmbrown-400 dark:placeholder-warmbrown-400 outline-none transition-all shadow-xs"
                 />
               </div>
             </div>
 
             {/* Password Input Field */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-warmbrown-800 block">
+              <label className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 block">
                 Password
               </label>
               <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-warmbrown-500">
+                <div className="absolute left-3.5 text-warmbrown-500 dark:text-peach-300/60">
                   <Lock size={16} />
                 </div>
                 <input
@@ -172,7 +172,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-10 pr-10 py-2.5 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  className="w-full bg-white dark:bg-warmbrown-900/90 border border-peach-300 dark:border-warmbrown-800 focus:border-warmbrown-600 dark:focus:border-peach-300 rounded-xl pl-10 pr-10 py-2.5 text-xs text-warmbrown-900 dark:text-peach-100 font-medium placeholder-warmbrown-400 dark:placeholder-warmbrown-400 outline-none transition-all shadow-xs"
                 />
                 <button
                   type="button"

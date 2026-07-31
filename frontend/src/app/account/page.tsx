@@ -218,8 +218,8 @@ export default function AccountPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Order History */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-peach-200/80 shadow-soft space-y-6">
-            <div className="flex items-center justify-between border-b border-peach-100 pb-4">
+          <div className="bg-white dark:bg-[#1F1610] p-6 sm:p-8 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft space-y-6">
+            <div className="flex items-center justify-between border-b border-peach-100 dark:border-warmbrown-900 pb-4">
               <h2 className="text-xl font-extrabold text-warmbrown-800 flex items-center gap-2">
                 <Package size={22} className="text-warmbrown-700" />
                 Order History & Status
@@ -274,7 +274,7 @@ export default function AccountPage() {
                           <span>
                             {item.qty}x {item.name}
                           </span>
-                          <span className="font-bold">${(item.price * item.qty).toFixed(2)}</span>
+                          <span className="font-bold">₹{(item.price * item.qty).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -282,7 +282,7 @@ export default function AccountPage() {
                     <div className="flex items-center justify-between pt-2 border-t border-peach-100 text-xs">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-warmbrown-800">
-                          Total: ${order.total.toFixed(2)}
+                          Total: ₹{order.total.toFixed(2)}
                         </span>
                         <span className="text-[10px] text-warmbrown-500">
                           ({order.paymentMethod === 'razorpay' ? 'Razorpay' : 'UPI Manual'})

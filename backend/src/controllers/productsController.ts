@@ -34,39 +34,95 @@ function positiveInteger(value: unknown, fallback: number, max: number): number 
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, max) : fallback;
 }
 
-export const listProducts: RequestHandler = asyncHandler(async (req, res) => {
-  const page = positiveInteger(req.query.page, 1, 100000);
-  const limit = positiveInteger(req.query.limit, 12, 48);
+type FacetField = 'productType' | 'designTheme' | 'yarnType' | 'size';
+
+function queryString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function queryNumber(value: unknown): number | undefined {
+  const rawValue = queryString(value);
+  if (!rawValue) return undefined;
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Builds the MongoDB predicate shared by product results, totals, and facets.
+ * `exclude` deliberately omits one field so each sidebar count answers
+ * "what would happen if I selected this option?" without fetching products
+ * into the browser.
+ */
+function buildProductFilter(req: Parameters<RequestHandler>[0], exclude?: FacetField): Record<string, unknown> {
   const filter: Record<string, unknown> = { isActive: true };
-  const exactFilters = ['productType', 'designTheme', 'yarnType', 'size'] as const;
+  const exactFilters: FacetField[] = ['productType', 'designTheme', 'yarnType', 'size'];
+
   for (const key of exactFilters) {
-    const value = req.query[key];
-    if (typeof value === 'string' && value.trim()) filter[key] = value.trim();
+    if (key === exclude) continue;
+    const value = queryString(req.query[key]);
+    if (value) filter[key] = value;
   }
-  if (req.query.inStock === 'true') filter.stockCount = { $gt: 0 };
-  if (req.query.bestSeller === 'true') filter.isBestSeller = true;
-  if (req.query.newArrival === 'true') filter.isNew = true;
 
-  const minPrice = Number(req.query.minPrice);
-  const maxPrice = Number(req.query.maxPrice);
-  if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
-    filter.price = { ...(Number.isFinite(minPrice) ? { $gte: minPrice } : {}), ...(Number.isFinite(maxPrice) ? { $lte: maxPrice } : {}) };
+  const stock = queryString(req.query.stock);
+  if (queryString(req.query.inStock) === 'true' || stock === 'in-stock' || stock === 'true') {
+    filter.stockCount = { $gt: 0 };
   }
-  const minRating = Number(req.query.minRating);
-  if (Number.isFinite(minRating)) filter.rating = { $gte: minRating };
+  if (stock === 'out-of-stock') filter.stockCount = 0;
+  if (queryString(req.query.bestSeller) === 'true') filter.isBestSeller = true;
+  if (queryString(req.query.newArrival) === 'true') filter.isNew = true;
 
-  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-  if (q) {
-    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const minPrice = queryNumber(req.query.minPrice);
+  const maxPrice = queryNumber(req.query.maxPrice);
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    filter.price = {
+      ...(minPrice !== undefined ? { $gte: minPrice } : {}),
+      ...(maxPrice !== undefined ? { $lte: maxPrice } : {}),
+    };
+  }
+
+  const minRating = queryNumber(req.query.minRating);
+  if (minRating !== undefined) filter.rating = { $gte: minRating };
+
+  // `q` remains supported for the existing global-search clients. `search` is
+  // the public catalogue-search parameter and takes precedence when supplied.
+  const search = (queryString(req.query.search) || queryString(req.query.q)).slice(0, 160);
+  if (search) {
+    const escaped = escapeRegex(search);
     filter.$or = [
       { slug: { $regex: escaped, $options: 'i' } },
       { name: { $regex: escaped, $options: 'i' } },
+      { description: { $regex: escaped, $options: 'i' } },
+      { highlights: { $regex: escaped, $options: 'i' } },
       { productType: { $regex: escaped, $options: 'i' } },
       { designTheme: { $regex: escaped, $options: 'i' } },
-      { yarnType: { $regex: escaped, $options: 'i' } },
-      { description: { $regex: escaped, $options: 'i' } },
     ];
   }
+
+  return filter;
+}
+
+async function getFacetCounts(filter: Record<string, unknown>, field: FacetField): Promise<Record<string, number>> {
+  const counts = await Product.aggregate<{ _id: string; count: number }>([
+    { $match: filter },
+    { $group: { _id: `$${field}`, count: { $sum: 1 } } },
+    { $sort: { _id: 1 } },
+  ]);
+
+  return Object.fromEntries(
+    counts
+      .filter((entry) => Boolean(entry._id))
+      .map((entry) => [entry._id, entry.count]),
+  );
+}
+
+export const listProducts: RequestHandler = asyncHandler(async (req, res) => {
+  const page = positiveInteger(req.query.page, 1, 100000);
+  const limit = positiveInteger(req.query.limit, 12, 48);
+  const filter = buildProductFilter(req);
 
   const sortBy = typeof req.query.sort === 'string' ? req.query.sort : 'featured';
   const sort = ({
@@ -77,13 +133,18 @@ export const listProducts: RequestHandler = asyncHandler(async (req, res) => {
     newest: { createdAt: -1 },
   }[sortBy] ?? { isBestSeller: -1, rating: -1, reviewCount: -1 }) as Record<string, SortOrder>;
 
-  const [products, total] = await Promise.all([
+  const [products, total, productTypeCounts, designThemeCounts, yarnTypeCounts, sizeCounts] = await Promise.all([
     Product.find(filter).sort(sort).skip((page - 1) * limit).limit(limit),
     Product.countDocuments(filter),
+    getFacetCounts(buildProductFilter(req, 'productType'), 'productType'),
+    getFacetCounts(buildProductFilter(req, 'designTheme'), 'designTheme'),
+    getFacetCounts(buildProductFilter(req, 'yarnType'), 'yarnType'),
+    getFacetCounts(buildProductFilter(req, 'size'), 'size'),
   ]);
   sendSuccess(res, 200, 'Products retrieved.', {
     products: products.map((product) => serializeProduct(product)),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    facets: { productTypeCounts, designThemeCounts, yarnTypeCounts, sizeCounts },
   });
 });
 

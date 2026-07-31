@@ -1,8 +1,8 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: 'class',
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
@@ -48,8 +48,16 @@ const config: Config = {
         'hover': '0 20px 35px -10px rgba(138, 90, 52, 0.18)',
       },
       borderRadius: {
-        '3xl': '1.75rem',
-        '4xl': '2.25rem',
+        none: '0px',
+        sm: '0px',
+        DEFAULT: '0px',
+        md: '0px',
+        lg: '0px',
+        xl: '0px',
+        '2xl': '0px',
+        '3xl': '0px',
+        '4xl': '0px',
+        full: '0px',
       }
     },
   },

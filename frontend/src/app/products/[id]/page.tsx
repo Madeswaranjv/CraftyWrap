@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { ProductCard } from '@/components/ProductCard';
+import { CustomSelect } from '@/components/CustomSelect';
 import { StarRating } from '@/components/StarRating';
 import { WhatsAppLogo } from '@/components/SocialIcons';
 import {
@@ -183,16 +184,16 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Right Column: Details & Actions */}
-        <div className="lg:col-span-6 space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-peach-200/80 shadow-soft">
+        <div className="lg:col-span-6 space-y-6 bg-white dark:bg-[#1F1610] p-6 sm:p-8 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft">
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-warmbrown-500 uppercase tracking-widest">
+            <div className="flex items-center justify-between text-xs font-bold text-warmbrown-500 dark:text-peach-300/60 uppercase tracking-widest">
               <span>{product.category} Collection</span>
-              <span className="flex items-center gap-1 text-warmbrown-700 bg-peach-100 px-2.5 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-warmbrown-700 dark:text-peach-200 bg-peach-100 dark:bg-warmbrown-900 px-2.5 py-0.5 rounded-full">
                 <Clock size={12} /> Ready in {product.prepTimeDays} days
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-warmbrown-800">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-warmbrown-800 dark:text-peach-100">
               {product.name}
             </h1>
 
@@ -200,13 +201,13 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Price & Stock status */}
-          <div className="flex items-baseline gap-3 pb-4 border-b border-peach-100">
-            <span className="text-3xl font-extrabold text-warmbrown-800">
-              ${product.price.toFixed(2)}
+          <div className="flex items-baseline gap-3 pb-4 border-b border-peach-100 dark:border-warmbrown-900">
+            <span className="text-3xl font-extrabold text-warmbrown-800 dark:text-peach-100">
+              ₹{product.price.toFixed(2)}
             </span>
             {product.originalPrice && (
               <span className="text-base text-warmbrown-400 line-through">
-                ${product.originalPrice.toFixed(2)}
+                ₹{product.originalPrice.toFixed(2)}
               </span>
             )}
             <span className="ml-auto text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
@@ -258,7 +259,7 @@ export default function ProductDetailPage() {
                 className="flex-1 bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50 py-3.5 px-6 rounded-full font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
                 <ShoppingBag size={18} />
-                <span>Add {quantity} to Cart — ${(product.price * quantity).toFixed(2)}</span>
+                <span>Add {quantity} to Cart — ₹{(product.price * quantity).toFixed(2)}</span>
               </button>
             </div>
 
@@ -424,15 +425,15 @@ export default function ProductDetailPage() {
 
                     <div>
                       <label className="text-xs font-bold text-warmbrown-700 block mb-1">Rating</label>
-                      <select
+                      <CustomSelect
                         value={reviewRating}
-                        onChange={(e) => setReviewRating(Number(e.target.value))}
-                        className="w-full bg-peach-50 border border-peach-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-warmbrown-600"
-                      >
-                        <option value={5}>5 Stars — Loved it!</option>
-                        <option value={4}>4 Stars — Very Good</option>
-                        <option value={3}>3 Stars — Average</option>
-                      </select>
+                        onChange={(val) => setReviewRating(Number(val))}
+                        options={[
+                          { value: 5, label: '5 Stars — Loved it!' },
+                          { value: 4, label: '4 Stars — Very Good' },
+                          { value: 3, label: '3 Stars — Average' },
+                        ]}
+                      />
                     </div>
                   </div>
 

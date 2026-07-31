@@ -76,19 +76,19 @@ export const HeroIntroAnimation: React.FC<HeroIntroAnimationProps> = ({
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.05, filter: 'blur(8px)' }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-[#FFF9F2] via-[#FDF0E6] to-[#FFEAD9] select-none overflow-hidden"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-[#FFF9F2] via-[#FDF0E6] to-[#FFEAD9] dark:from-[#140E0A] dark:via-[#1A120B] dark:to-[#1F1610] select-none overflow-hidden"
           role={isError ? 'alert' : 'status'}
           aria-live="polite"
           aria-busy={isLoading}
         >
           {/* Animated Ambient Glows */}
           <motion.div
-            className="absolute w-96 h-96 bg-amber-300/40 rounded-full blur-3xl"
+            className="absolute w-96 h-96 bg-amber-300/40 dark:bg-amber-600/20 rounded-full blur-3xl"
             animate={shouldAnimate ? { scale: [1, 1.14, 1], opacity: [0.55, 0.9, 0.55] } : undefined}
             transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.div
-            className="absolute w-72 h-72 bg-peach-300/40 rounded-full blur-2xl"
+            className="absolute w-72 h-72 bg-peach-300/40 dark:bg-orange-600/20 rounded-full blur-2xl"
             animate={shouldAnimate ? { scale: [0.85, 1.18, 0.85], opacity: [0.35, 0.7, 0.35] } : undefined}
             transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
           />
@@ -96,7 +96,7 @@ export const HeroIntroAnimation: React.FC<HeroIntroAnimationProps> = ({
           <div className="relative z-10 flex flex-col items-center gap-5 text-center px-4 max-w-md">
             {/* Yarn Ball Icon Container */}
             <motion.div
-              className="relative w-24 h-24 bg-white rounded-3xl border-2 border-peach-300 shadow-2xl flex items-center justify-center p-2"
+              className="relative w-24 h-24 bg-white dark:bg-[#251A13] rounded-3xl border-2 border-peach-300 dark:border-warmbrown-700 shadow-2xl flex items-center justify-center p-2"
               animate={shouldAnimate ? { rotate: [0, 7, -7, 0], y: [0, -7, 0], scale: [1, 1.05, 1] } : undefined}
               transition={{ duration: 1.7, repeat: Infinity, ease: 'easeInOut' }}
             >
@@ -118,18 +118,18 @@ export const HeroIntroAnimation: React.FC<HeroIntroAnimationProps> = ({
 
             {/* Title & Badge */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-warmbrown-600">
+              <div className="flex items-center justify-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-warmbrown-600 dark:text-peach-300">
                 <Heart size={14} className="fill-peach-500 text-peach-500" />
                 <span>{eyebrow}</span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-warmbrown-800 tracking-tight">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-warmbrown-800 dark:text-peach-100 tracking-tight">
                 {title}
               </h2>
             </div>
 
             {/* Yarn Thread Unwinding Path SVG */}
             <div className="w-56 h-8 relative overflow-hidden flex items-center justify-center">
-              <svg className="w-full h-full text-peach-500" viewBox="0 0 200 24" fill="none">
+              <svg className="w-full h-full text-peach-500 dark:text-peach-300" viewBox="0 0 200 24" fill="none">
                 <motion.path
                   d="M 0 12 Q 25 2, 50 12 T 100 12 T 150 12 T 200 12"
                   stroke="currentColor"
@@ -144,12 +144,12 @@ export const HeroIntroAnimation: React.FC<HeroIntroAnimationProps> = ({
 
             {isError ? (
               <div className="space-y-4">
-                <p className="text-sm leading-relaxed text-warmbrown-700">{errorMessage}</p>
+                <p className="text-sm leading-relaxed text-warmbrown-700 dark:text-peach-200">{errorMessage}</p>
                 {onRetry && (
                   <button
                     type="button"
                     onClick={onRetry}
-                    className="inline-flex items-center gap-2 rounded-full bg-warmbrown-800 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-colors hover:bg-warmbrown-900"
+                    className="inline-flex items-center gap-2 rounded-full bg-warmbrown-800 dark:bg-warmbrown-700 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-colors hover:bg-warmbrown-900"
                   >
                     <RotateCcw size={14} />
                     Try Again
@@ -157,12 +157,12 @@ export const HeroIntroAnimation: React.FC<HeroIntroAnimationProps> = ({
                 )}
               </div>
             ) : (
-              <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-warmbrown-700">
+              <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-warmbrown-700 dark:text-peach-200">
                 <span>{state === 'replay' ? 'A little handmade magic' : 'Waiting for the shop to respond'}</span>
                 {isLoading && !reducedMotion && [0, 1, 2].map((dot) => (
                   <motion.span
                     key={dot}
-                    className="h-1.5 w-1.5 rounded-full bg-peach-500"
+                    className="h-1.5 w-1.5 rounded-full bg-peach-500 dark:bg-peach-300"
                     animate={{ y: [0, -5, 0], opacity: [0.35, 1, 0.35] }}
                     transition={{ duration: 0.8, repeat: Infinity, delay: dot * 0.14, ease: 'easeInOut' }}
                   />
@@ -170,6 +170,15 @@ export const HeroIntroAnimation: React.FC<HeroIntroAnimationProps> = ({
               </div>
             )}
           </div>
+
+          {/* Quick Skip Intro Button */}
+          <button
+            type="button"
+            onClick={() => setHasAutoClosed(true)}
+            className="absolute bottom-6 right-6 text-xs font-bold text-warmbrown-600 dark:text-peach-200 hover:text-warmbrown-900 dark:hover:text-white bg-white/80 dark:bg-warmbrown-900/90 px-4 py-2 rounded-full border border-peach-200 dark:border-warmbrown-800 backdrop-blur-md shadow-sm transition-all hover:scale-105"
+          >
+            Skip Intro &rarr;
+          </button>
         </motion.div>
       )}
     </AnimatePresence>

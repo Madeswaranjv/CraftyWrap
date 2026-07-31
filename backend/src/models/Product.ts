@@ -55,6 +55,8 @@ productSchema.index({ isActive: 1, productType: 1, designTheme: 1, yarnType: 1, 
 productSchema.index({ isActive: 1, isBestSeller: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, isNew: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, price: 1 });
+productSchema.index({ isActive: 1, price: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, rating: -1, reviewCount: -1, createdAt: -1 });
 productSchema.index({ name: 'text', description: 'text' });
 
 export const Product = models.Product || model<IProduct>('Product', productSchema);

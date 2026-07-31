@@ -78,6 +78,14 @@ const productPresentation: Record<string, { imageBg: string; imageIconName: stri
 const fallbackPresentation = { imageBg: 'from-peach-100 via-amber-100 to-rose-100', imageIconName: 'Yarn' };
 const themeColors = ['bg-emerald-100 text-emerald-800', 'bg-rose-100 text-rose-800', 'bg-sky-100 text-sky-800', 'bg-amber-100 text-amber-800', 'bg-orange-100 text-orange-800', 'bg-yellow-100 text-yellow-800', 'bg-pink-100 text-pink-800', 'bg-indigo-100 text-indigo-800', 'bg-teal-100 text-teal-800'];
 
+export function formatSizeToCm(size: string): string {
+  if (!size) return '';
+  return size.replace(/(\d+)\s*(?:"|'|in|inch|inches)/gi, (_, inches) => {
+    const cm = Math.round(Number(inches) * 2.54);
+    return `${cm} cm`;
+  });
+}
+
 export function toCatalogProduct(data: Omit<CatalogProduct, 'category' | 'imageBg' | 'imageIconName'> & { _id?: string }): CatalogProduct {
   const presentation = productPresentation[data.slug] ?? fallbackPresentation;
   return {
@@ -85,6 +93,7 @@ export function toCatalogProduct(data: Omit<CatalogProduct, 'category' | 'imageB
     databaseId: data.databaseId ?? data._id ?? '',
     id: data.id ?? data.slug,
     category: data.designTheme,
+    size: formatSizeToCm(data.size),
     imageBg: presentation.imageBg,
     imageIconName: presentation.imageIconName,
   };

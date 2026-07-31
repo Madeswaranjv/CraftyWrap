@@ -335,25 +335,25 @@ export default function AdminDashboardPage() {
       {/* TAB 1: PRODUCTS */}
       {activeTab === 'products' && (
         <div className="space-y-6">
-          <form onSubmit={handleCreateProduct} className="bg-white p-6 rounded-3xl border border-peach-200 space-y-4">
-            <h3 className="font-bold text-warmbrown-800 text-sm flex items-center gap-2">
+          <form onSubmit={handleCreateProduct} className="bg-white dark:bg-[#1F1610] p-6 rounded-3xl border border-peach-200 dark:border-warmbrown-900/80 space-y-4">
+            <h3 className="font-bold text-warmbrown-800 dark:text-peach-100 text-sm flex items-center gap-2">
               <Plus size={16} /> Create New Product
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <input type="text" placeholder="Product Name" required value={newProductName} onChange={(e) => setNewProductName(e.target.value)} className="bg-peach-50 border p-2.5 rounded-xl outline-none" />
-              <input type="text" placeholder="Slug (optional)" value={newProductSlug} onChange={(e) => setNewProductSlug(e.target.value)} className="bg-peach-50 border p-2.5 rounded-xl outline-none" />
-              <input type="number" step="0.01" placeholder="Price ($)" required value={newProductPrice} onChange={(e) => setNewProductPrice(Number(e.target.value))} className="bg-peach-50 border p-2.5 rounded-xl outline-none" />
-              <input type="text" placeholder="Product Type" value={newProductType} onChange={(e) => setNewProductType(e.target.value)} className="bg-peach-50 border p-2.5 rounded-xl outline-none" />
-              <input type="text" placeholder="Design Theme" value={newProductTheme} onChange={(e) => setNewProductTheme(e.target.value)} className="bg-peach-50 border p-2.5 rounded-xl outline-none" />
-              <input type="text" placeholder="Yarn Type" value={newProductYarn} onChange={(e) => setNewProductYarn(e.target.value)} className="bg-peach-50 border p-2.5 rounded-xl outline-none" />
+              <input type="text" placeholder="Product Name" required value={newProductName} onChange={(e) => setNewProductName(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
+              <input type="text" placeholder="Slug (optional)" value={newProductSlug} onChange={(e) => setNewProductSlug(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
+              <input type="number" step="0.01" placeholder="Price (₹)" required value={newProductPrice} onChange={(e) => setNewProductPrice(Number(e.target.value))} className="bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
+              <input type="text" placeholder="Product Type" value={newProductType} onChange={(e) => setNewProductType(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
+              <input type="text" placeholder="Design Theme" value={newProductTheme} onChange={(e) => setNewProductTheme(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
+              <input type="text" placeholder="Yarn Type" value={newProductYarn} onChange={(e) => setNewProductYarn(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
             </div>
             <button type="submit" className="bg-warmbrown-800 text-white px-5 py-2 rounded-full text-xs font-bold">Add Product</button>
           </form>
 
-          <div className="bg-white rounded-3xl border border-peach-200 overflow-hidden text-xs">
+          <div className="bg-white dark:bg-[#1F1610] rounded-3xl border border-peach-200 dark:border-warmbrown-900/80 overflow-hidden text-xs">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-peach-50 border-b border-peach-200 text-warmbrown-800 font-bold">
+                <tr className="bg-peach-50 dark:bg-warmbrown-900 border-b border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 font-bold">
                   <th className="p-3">Name</th>
                   <th className="p-3">Theme</th>
                   <th className="p-3">Type</th>
@@ -361,13 +361,13 @@ export default function AdminDashboardPage() {
                   <th className="p-3">Stock</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-peach-100">
+              <tbody className="divide-y divide-peach-100 dark:divide-warmbrown-900">
                 {products.map((p) => (
-                  <tr key={p.databaseId || p.id} className="hover:bg-peach-50/50">
-                    <td className="p-3 font-bold text-warmbrown-800">{p.name}</td>
+                  <tr key={p.databaseId || p.id} className="hover:bg-peach-50/50 dark:hover:bg-warmbrown-900/50">
+                    <td className="p-3 font-bold text-warmbrown-800 dark:text-peach-100">{p.name}</td>
                     <td className="p-3">{p.designTheme}</td>
                     <td className="p-3">{p.productType}</td>
-                    <td className="p-3 font-bold">${p.price.toFixed(2)}</td>
+                    <td className="p-3 font-bold">₹{p.price.toFixed(2)}</td>
                     <td className="p-3">{p.stockCount}</td>
                   </tr>
                 ))}
@@ -494,7 +494,7 @@ export default function AdminDashboardPage() {
                   <td className="p-3 font-mono font-bold text-warmbrown-800">#{ord._id.slice(-6)}</td>
                   <td className="p-3">{ord.user?.name ?? ord.shippingAddress.fullName}</td>
                   <td className="p-3">{ord.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</td>
-                  <td className="p-3 font-bold">${ord.total.toFixed(2)}</td>
+                  <td className="p-3 font-bold">₹{ord.total.toFixed(2)}</td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${ord.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                       {ord.paymentStatus}

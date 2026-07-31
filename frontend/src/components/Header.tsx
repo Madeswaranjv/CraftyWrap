@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { apiRequest } from '@/lib/api';
 import { CatalogTheme, toCatalogTheme } from '@/lib/catalog';
 import {
@@ -40,21 +41,18 @@ export const Header: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    let isCurrent = true;
-    const fetchThemes = async () => {
-      try {
-        const rawThemes = await apiRequest<Omit<CatalogTheme, 'id' | 'badgeColor' | 'bgColor'>[]>('/design-themes');
-        if (isCurrent) {
-          setThemes(rawThemes.map((theme, index) => toCatalogTheme(theme, index)));
-        }
-      } catch {
-        // Fallback gracefully
-      }
-    };
-    void fetchThemes();
-    return () => { isCurrent = false; };
+  const fetchThemes = React.useCallback(async () => {
+    try {
+      const rawThemes = await apiRequest<Omit<CatalogTheme, 'id' | 'badgeColor' | 'bgColor'>[]>('/design-themes');
+      setThemes(rawThemes.map((theme, index) => toCatalogTheme(theme, index)));
+    } catch {
+      // Fallback gracefully
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchThemes();
+  }, [fetchThemes]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -87,12 +85,12 @@ export const Header: React.FC = () => {
 
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-peach-100 transition-all shadow-sm">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1A120B]/95 backdrop-blur-md border-b border-peach-100 dark:border-warmbrown-900 transition-colors duration-300 shadow-sm">
       {/* Main Navigation Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group shrink-0">
-          <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-peach-300 shadow-sm group-hover:scale-105 transition-transform">
+          <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-peach-300 dark:border-warmbrown-700 shadow-sm group-hover:scale-105 transition-transform">
             <Image
               src="/logo.png"
               alt="CraftyWrap Logo"
@@ -102,25 +100,25 @@ export const Header: React.FC = () => {
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-extrabold text-xl tracking-tight text-warmbrown-800 leading-tight group-hover:text-warmbrown-600 transition-colors">
+            <span className="font-extrabold text-xl tracking-tight text-warmbrown-800 dark:text-peach-100 leading-tight group-hover:text-warmbrown-600 transition-colors">
               CraftyWrap
             </span>
-            <span className="text-[10px] tracking-widest uppercase font-semibold text-warmbrown-500">
+            <span className="text-[10px] tracking-widest uppercase font-semibold text-warmbrown-500 dark:text-warmbrown-400">
               Unwrap The Joy 🧶
             </span>
           </div>
         </Link>
 
         {/* Desktop Icon-Only Navbar */}
-        <nav className="hidden lg:flex items-center gap-3 text-warmbrown-800">
+        <nav className="hidden lg:flex items-center gap-3 text-warmbrown-800 dark:text-peach-100">
           {/* Home Icon */}
           <Link
             href="/"
             title="Home"
             className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs border group hover:-translate-y-0.5 active:scale-95 ${
               pathname === '/'
-                ? 'bg-peach-200 border-peach-300 ring-2 ring-peach-300/50 shadow-xs'
-                : 'bg-peach-100/70 border-peach-200/60 hover:bg-peach-200/90 hover:border-peach-300 hover:shadow-sm'
+                ? 'bg-peach-200 border-peach-300 dark:bg-warmbrown-800 dark:border-warmbrown-700 shadow-xs'
+                : 'bg-peach-100/70 border-peach-200/60 dark:bg-warmbrown-900/80 dark:border-warmbrown-800/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 dark:hover:border-warmbrown-700 hover:shadow-sm'
             }`}
           >
             <Image
@@ -128,14 +126,17 @@ export const Header: React.FC = () => {
               alt="Home"
               width={22}
               height={22}
-              className="object-contain group-hover:rotate-6 group-hover:scale-110 transition-transform duration-300"
+              className="object-contain dark:brightness-0 dark:invert group-hover:rotate-6 group-hover:scale-110 transition-transform duration-300"
             />
           </Link>
 
           {/* Category Dropdown Icon */}
           <div
             className="relative"
-            onMouseEnter={() => setIsCategoryDropdownOpen(true)}
+            onMouseEnter={() => {
+              setIsCategoryDropdownOpen(true);
+              void fetchThemes();
+            }}
             onMouseLeave={() => setIsCategoryDropdownOpen(false)}
           >
             <Link
@@ -143,8 +144,8 @@ export const Header: React.FC = () => {
               title="Collections"
               className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs border group hover:-translate-y-0.5 active:scale-95 ${
                 pathname.startsWith('/collections')
-                  ? 'bg-peach-200 border-peach-300 ring-2 ring-peach-300/50 shadow-xs'
-                  : 'bg-peach-100/70 border-peach-200/60 hover:bg-peach-200/90 hover:border-peach-300 hover:shadow-sm'
+                  ? 'bg-peach-200 border-peach-300 dark:bg-warmbrown-800 dark:border-warmbrown-700 shadow-xs'
+                  : 'bg-peach-100/70 border-peach-200/60 dark:bg-warmbrown-900/80 dark:border-warmbrown-800/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 dark:hover:border-warmbrown-700 hover:shadow-sm'
               }`}
             >
               <Image
@@ -152,34 +153,34 @@ export const Header: React.FC = () => {
                 alt="Collections"
                 width={22}
                 height={22}
-                className="object-contain group-hover:-rotate-6 group-hover:scale-110 transition-transform duration-300"
+                className="object-contain dark:brightness-0 dark:invert group-hover:-rotate-6 group-hover:scale-110 transition-transform duration-300"
               />
             </Link>
 
             {isCategoryDropdownOpen && (
-              <div className="absolute top-full left-0 w-64 bg-white rounded-2xl shadow-xl border border-peach-100 p-2 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-warmbrown-400 border-b border-peach-100 mb-1">
+              <div className="absolute top-full left-0 w-64 bg-white dark:bg-[#1F1610] rounded-2xl shadow-xl border border-peach-100 dark:border-warmbrown-800 p-2 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-warmbrown-400 dark:text-peach-300/60 border-b border-peach-100 dark:border-warmbrown-800 mb-1">
                   Shop By Category
                 </div>
                 {themes.map((theme) => (
                   <Link
                     key={theme._id || theme.id}
                     href={`/collections?category=${encodeURIComponent(theme.name)}`}
-                    className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium hover:bg-peach-50 text-warmbrown-800 hover:text-warmbrown-900 transition-colors"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium hover:bg-peach-50 dark:hover:bg-warmbrown-900/80 text-warmbrown-800 dark:text-peach-100 hover:text-warmbrown-900 transition-colors"
                   >
                     <span className="flex items-center gap-2">
                       <span>{theme.icon}</span>
                       <span>{theme.name}</span>
                     </span>
-                    <span className="text-xs text-warmbrown-400 font-normal">
-                      {theme.itemCount}
+                    <span className="text-xs text-warmbrown-500 dark:text-peach-300/70 font-semibold">
+                      {theme.itemCount} {theme.itemCount === 1 ? 'item' : 'items'}
                     </span>
                   </Link>
                 ))}
-                <div className="border-t border-peach-100 mt-2 pt-2 px-2">
+                <div className="border-t border-peach-100 dark:border-warmbrown-800 mt-2 pt-2 px-2">
                   <Link
                     href="/collections"
-                    className="block text-center text-xs font-bold text-warmbrown-600 hover:text-warmbrown-800 py-1 bg-peach-100/60 rounded-lg hover:bg-peach-200/60 transition-colors"
+                    className="block text-center text-xs font-bold text-warmbrown-600 dark:text-peach-200 hover:text-warmbrown-800 py-1 bg-peach-100/60 dark:bg-warmbrown-900 rounded-lg hover:bg-peach-200/60 transition-colors"
                   >
                     View All Collections &rarr;
                   </Link>
@@ -194,8 +195,8 @@ export const Header: React.FC = () => {
             title="Custom Order Request"
             className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs border group hover:-translate-y-0.5 active:scale-95 ${
               pathname === '/custom-order'
-                ? 'bg-peach-200 border-peach-300 ring-2 ring-peach-300/50 shadow-xs'
-                : 'bg-peach-100/70 border-peach-200/60 hover:bg-peach-200/90 hover:border-peach-300 hover:shadow-sm'
+                ? 'bg-peach-200 border-peach-300 dark:bg-warmbrown-800 dark:border-warmbrown-700 shadow-xs'
+                : 'bg-peach-100/70 border-peach-200/60 dark:bg-warmbrown-900/80 dark:border-warmbrown-800/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 dark:hover:border-warmbrown-700 hover:shadow-sm'
             }`}
           >
             <Image
@@ -203,7 +204,7 @@ export const Header: React.FC = () => {
               alt="Custom Orders"
               width={22}
               height={22}
-              className="object-contain group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300"
+              className="object-contain dark:brightness-0 dark:invert group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300"
             />
           </Link>
 
@@ -211,14 +212,18 @@ export const Header: React.FC = () => {
           <Link
             href="/collections?filter=best-seller"
             title="Best Sellers"
-            className="w-10 h-10 rounded-2xl bg-peach-100/70 border border-peach-200/60 hover:bg-peach-200/90 hover:border-peach-300 flex items-center justify-center transition-all duration-300 shadow-xs hover:shadow-sm hover:-translate-y-0.5 active:scale-95 group"
+            className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs border group hover:-translate-y-0.5 active:scale-95 ${
+              pathname.includes('best-seller')
+                ? 'bg-peach-200 border-peach-300 dark:bg-warmbrown-800 dark:border-warmbrown-700 shadow-xs'
+                : 'bg-peach-100/70 border-peach-200/60 dark:bg-warmbrown-900/80 dark:border-warmbrown-800/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 dark:hover:border-warmbrown-700 hover:shadow-sm'
+            }`}
           >
             <Image
               src="/bestsellers-icon.svg"
               alt="Best Sellers"
               width={22}
               height={22}
-              className="object-contain group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:scale-110 transition-transform duration-300"
+              className="object-contain dark:brightness-0 dark:invert group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:scale-110 transition-transform duration-300"
             />
           </Link>
         </nav>
@@ -232,11 +237,11 @@ export const Header: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setShowAutocomplete(autocompleteResults.length > 0)}
-              className="w-full bg-peach-50/80 hover:bg-peach-50 border border-peach-200 focus:border-warmbrown-500 rounded-full py-2 pl-4 pr-10 text-xs text-warmbrown-800 placeholder-warmbrown-400 outline-none transition-all"
+              className="w-full bg-peach-50/80 dark:bg-warmbrown-900/90 hover:bg-peach-50 border border-peach-200 dark:border-warmbrown-800 focus:border-warmbrown-500 dark:focus:border-warmbrown-600 rounded-full py-2 pl-4 pr-10 text-xs text-warmbrown-800 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 outline-none transition-all"
             />
             <button
               type="submit"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-warmbrown-600 hover:bg-warmbrown-700 text-white p-1.5 rounded-full transition-colors"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-warmbrown-600 dark:bg-warmbrown-700 hover:bg-warmbrown-700 text-white p-1.5 rounded-full transition-colors"
             >
               <Search size={14} />
             </button>
@@ -244,19 +249,19 @@ export const Header: React.FC = () => {
 
           {/* Autocomplete Popup */}
           {showAutocomplete && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-peach-200 shadow-xl p-2 z-50 max-h-72 overflow-y-auto space-y-1">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1F1610] rounded-2xl border border-peach-200 dark:border-warmbrown-800 shadow-xl p-2 z-50 max-h-72 overflow-y-auto space-y-1">
               {autocompleteResults.map((item) => (
                 <Link
                   key={item.slug}
                   href={`/products/${item.slug}`}
                   onClick={() => setShowAutocomplete(false)}
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-peach-50 text-xs transition-colors"
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-peach-50 dark:hover:bg-warmbrown-900 text-xs transition-colors"
                 >
                   <div>
-                    <span className="font-bold text-warmbrown-800 block">{item.name}</span>
-                    <span className="text-[10px] text-warmbrown-500">{item.productType} • {item.designTheme}</span>
+                    <span className="font-bold text-warmbrown-800 dark:text-peach-100 block">{item.name}</span>
+                    <span className="text-[10px] text-warmbrown-500 dark:text-peach-300/60">{item.productType} • {item.designTheme}</span>
                   </div>
-                  <span className="font-extrabold text-warmbrown-800">${item.price.toFixed(2)}</span>
+                  <span className="font-extrabold text-warmbrown-800 dark:text-peach-100">₹{item.price.toFixed(2)}</span>
                 </Link>
               ))}
             </div>
@@ -269,9 +274,9 @@ export const Header: React.FC = () => {
           <Link
             href="/account"
             title="Wishlist"
-            className="w-9 h-9 sm:w-10 sm:h-10 bg-peach-100/70 hover:bg-peach-200/90 text-warmbrown-800 rounded-full flex items-center justify-center border border-peach-200/60 shadow-xs hover:scale-105 transition-transform relative"
+            className="w-9 h-9 sm:w-10 sm:h-10 bg-peach-100/70 dark:bg-warmbrown-900/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-100 rounded-full flex items-center justify-center border border-peach-200/60 dark:border-warmbrown-800 shadow-xs hover:scale-105 transition-transform relative"
           >
-            <Heart size={18} className={wishlist.length > 0 ? "fill-rose-500 text-rose-500" : "text-warmbrown-700"} />
+            <Heart size={18} className={wishlist.length > 0 ? "fill-rose-500 text-rose-500" : "text-warmbrown-700 dark:text-peach-200"} />
             {wishlist.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
                 {wishlist.length}
@@ -284,17 +289,14 @@ export const Header: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <Link
                 href="/account"
-                className="flex items-center gap-2 bg-peach-50 hover:bg-peach-100 border border-peach-200 rounded-full px-2.5 py-1 text-xs font-bold text-warmbrown-800 transition-all shadow-xs"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-peach-300 dark:bg-warmbrown-700 hover:bg-peach-400 dark:hover:bg-warmbrown-600 text-warmbrown-900 dark:text-peach-100 flex items-center justify-center font-extrabold text-sm sm:text-base border border-peach-200 dark:border-warmbrown-800 shadow-md transition-transform hover:scale-105 shrink-0"
                 title={`Account (${user.name})`}
               >
-                <div className="w-6 h-6 rounded-full bg-peach-300 text-warmbrown-900 flex items-center justify-center font-extrabold text-[11px] overflow-hidden shrink-0">
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    user.name?.[0]?.toUpperCase() ?? <User size={13} />
-                  )}
-                </div>
-                <span className="hidden xl:inline max-w-[100px] truncate">{user.name}</span>
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
+                ) : (
+                  user.name?.[0]?.toUpperCase() ?? <User size={18} />
+                )}
               </Link>
               <button
                 onClick={() => {
@@ -302,7 +304,7 @@ export const Header: React.FC = () => {
                   router.push('/');
                 }}
                 title="Sign Out"
-                className="w-9 h-9 bg-peach-100/70 hover:bg-rose-100 text-warmbrown-700 hover:text-rose-700 rounded-full flex items-center justify-center border border-peach-200/60 transition-colors shadow-xs"
+                className="w-9 h-9 bg-peach-100/70 dark:bg-warmbrown-900/80 hover:bg-rose-100 dark:hover:bg-rose-950 text-warmbrown-700 dark:text-peach-200 hover:text-rose-700 dark:hover:text-rose-300 rounded-full flex items-center justify-center border border-peach-200/60 dark:border-warmbrown-800 transition-colors shadow-xs"
               >
                 <LogOut size={16} />
               </button>
@@ -311,24 +313,27 @@ export const Header: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <Link
                 href="/login"
-                className="text-xs font-bold text-warmbrown-800 hover:text-warmbrown-600 px-3 py-1.5 rounded-full hover:bg-peach-50 transition-colors"
+                className="text-xs font-bold text-warmbrown-800 dark:text-peach-100 hover:text-warmbrown-600 dark:hover:text-peach-300 px-3 py-1.5 rounded-full hover:bg-peach-50 dark:hover:bg-warmbrown-900 transition-colors"
               >
                 Log In
               </Link>
               <Link
                 href="/signup"
-                className="hidden sm:inline-block bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50 text-xs font-bold px-3.5 py-1.5 rounded-full shadow-xs transition-transform hover:scale-105"
+                className="hidden sm:inline-block bg-warmbrown-800 dark:bg-warmbrown-700 hover:bg-warmbrown-900 text-peach-50 text-xs font-bold px-3.5 py-1.5 rounded-full shadow-xs transition-transform hover:scale-105 border border-peach-200 dark:border-warmbrown-800"
               >
                 Sign Up
               </Link>
             </div>
           )}
 
+          {/* Theme Toggle Button (Light/Dark Switcher) */}
+          <ThemeToggle className="shrink-0" />
+
           {/* Cart Icon Link */}
           <Link
             href="/cart"
             title="View Shopping Cart"
-            className="w-9 h-9 sm:w-10 sm:h-10 bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 relative shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 bg-warmbrown-800 dark:bg-warmbrown-700 hover:bg-warmbrown-900 dark:hover:bg-warmbrown-600 text-peach-50 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 relative shrink-0 border border-peach-200 dark:border-warmbrown-800"
           >
             <ShoppingCart size={18} />
             {cartCount > 0 && (
@@ -418,6 +423,9 @@ export const Header: React.FC = () => {
               <User size={16} />
               {user.isLoggedIn ? `Account (${user.name})` : 'Sign In'}
             </Link>
+            <div className="pt-2 border-t border-peach-100 dark:border-warmbrown-800">
+              <ThemeToggle showLabel={true} />
+            </div>
           </nav>
         </div>
       )}
