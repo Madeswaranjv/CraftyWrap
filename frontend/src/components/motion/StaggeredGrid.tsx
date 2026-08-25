@@ -22,8 +22,7 @@ export const StaggeredGrid: React.FC<StaggeredGridProps> = ({
   return (
     <motion.div
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.1 }}
+      animate="visible"
       variants={{
         hidden: {},
         visible: {

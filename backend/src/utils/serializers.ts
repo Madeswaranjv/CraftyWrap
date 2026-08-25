@@ -15,14 +15,24 @@ export function serializeProduct(product: ProductWithId | Record<string, unknown
   };
 }
 
-export function serializeCart(cart: ICart & { _id?: { toString(): string } }) {
+export function serializeCart(cart: ICart & { _id?: { toString(): string } } | Record<string, unknown>) {
+  const value = 'toObject' in cart && typeof cart.toObject === 'function'
+    ? (cart as { toObject(): Record<string, unknown> }).toObject()
+    : (cart as Record<string, unknown>);
+
+  const rawItems = Array.isArray(value.items) ? value.items : [];
+
   return {
-    ...cart,
-    id: cart._id?.toString(),
-    items: cart.items.map((item) => {
-      const product = item.product as unknown as ProductWithId;
+    ...value,
+    id: value._id?.toString(),
+    giftWrap: Boolean(value.giftWrap),
+    giftNote: (value.giftNote as string) ?? '',
+    promoCode: (value.promoCode as string) ?? '',
+    items: rawItems.map((item: unknown) => {
+      const record = item as Record<string, unknown>;
+      const product = record.product as unknown as ProductWithId;
       return {
-        ...item,
+        ...record,
         product: product && typeof product === 'object' && 'slug' in product
           ? serializeProduct(product)
           : product,

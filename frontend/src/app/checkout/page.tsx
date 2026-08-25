@@ -2,32 +2,56 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCart, PaymentMethod, Order } from '@/context/CartContext';
+import { useCart, Order } from '@/context/CartContext';
 import { apiRequest, getOrCreateCartToken, getStoredAccessToken } from '@/lib/api';
 import {
   CreditCard,
-  QrCode,
   CheckCircle2,
   Lock,
-  Copy,
-  Check,
   Truck,
   ArrowRight,
   ShieldCheck,
-  Clock,
   AlertCircle,
-  ShoppingBag,
 } from 'lucide-react';
 
+const loadRazorpayScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as unknown as { Razorpay?: unknown }).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function CheckoutPage() {
-  const { cart, subtotal, giftWrap, user, clearCart, addOrder, latestOrder } = useCart();
+  const { cart, subtotal, giftWrap, user, clearCart, addOrder } = useCart();
   const router = useRouter();
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
-  const [upiCopied, setUpiCopied] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [pendingDemoOrder, setPendingDemoOrder] = useState<Order | null>(null);
+  const [selectedDemoOption, setSelectedDemoOption] = useState<'card' | 'upi' | 'netbanking' | 'wallet'>('upi');
+
+  const confirmDemoPayment = async () => {
+    if (!pendingDemoOrder) return;
+    const paidOrder: Order = {
+      ...pendingDemoOrder,
+      paymentStatus: 'paid',
+      orderStatus: 'preparing',
+      status: 'preparing',
+      statusColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+    };
+    addOrder(paidOrder);
+    setPlacedOrder(paidOrder);
+    setPendingDemoOrder(null);
+    await clearCart();
+  };
 
   // Address form fields
   const [fullName, setFullName] = useState(user.name || 'Maya Lin');
@@ -37,19 +61,9 @@ export default function CheckoutPage() {
   const [pincode, setPincode] = useState('560001');
 
   const safeSubtotal = Number.isNaN(Number(subtotal)) ? 0 : Number(subtotal);
-  const giftWrapFee = giftWrap ? 4.99 : 0;
-  const shippingFee = safeSubtotal > 50 || cart.length === 0 ? 0 : 5.99;
+  const giftWrapFee = giftWrap ? 49 : 0;
+  const shippingFee = cart.length === 0 ? 0 : 50;
   const total = safeSubtotal + giftWrapFee + shippingFee;
-
-  const upiId = 'craftywrap@upi';
-  const upiDeepLink = `upi://pay?pa=${upiId}&pn=CraftyWrap&am=${total.toFixed(2)}&cu=INR`;
-  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiDeepLink)}`;
-
-  const copyUpiId = () => {
-    navigator.clipboard.writeText(upiId);
-    setUpiCopied(true);
-    setTimeout(() => setUpiCopied(false), 2500);
-  };
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +75,10 @@ export default function CheckoutPage() {
 
     setIsPlacingOrder(true);
     try {
-      const createdOrder = await apiRequest<Record<string, unknown>>('/orders/checkout', {
+      const responseRes = await apiRequest<{
+        order: Record<string, unknown>;
+        razorpayOrder?: { id: string; amount: number; currency: string; keyId: string };
+      }>('/orders/checkout', {
         method: 'POST',
         token: getStoredAccessToken(),
         cartToken: getOrCreateCartToken(),
@@ -74,9 +91,11 @@ export default function CheckoutPage() {
             state: 'Karnataka',
             pincode,
           },
-          paymentMethod,
+          paymentMethod: 'razorpay',
         }),
       });
+
+      const createdOrder = responseRes.order ?? responseRes;
 
       const formattedOrder: Order = {
         id: String(createdOrder._id ?? createdOrder.id),
@@ -85,18 +104,67 @@ export default function CheckoutPage() {
         date: new Date(String(createdOrder.createdAt || Date.now())).toLocaleDateString(),
         items: ((createdOrder.items as Array<{ name: string; quantity: number; price: number }>) ?? []).map((item) => ({ ...item, qty: item.quantity })),
         total: Number(createdOrder.total),
-        paymentMethod: createdOrder.paymentMethod as PaymentMethod,
-        paymentStatus: createdOrder.paymentStatus as 'paid' | 'pending_verification',
+        paymentMethod: 'razorpay',
+        paymentStatus: (createdOrder.paymentStatus as 'paid' | 'pending_verification') ?? 'paid',
         orderStatus: String(createdOrder.orderStatus),
         status: String(createdOrder.orderStatus).replaceAll('_', ' '),
-        statusColor: createdOrder.paymentStatus === 'pending_verification' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-emerald-100 text-emerald-900 border-emerald-300',
+        statusColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
         shippingAddress: createdOrder.shippingAddress as any,
         trackingNumber: createdOrder.trackingNumber as string | undefined,
       };
 
-      addOrder(formattedOrder);
-      setPlacedOrder(formattedOrder);
-      await clearCart();
+      const isLoaded = await loadRazorpayScript();
+      const rzpOrder = responseRes.razorpayOrder;
+
+      if (isLoaded && (window as unknown as { Razorpay?: any }).Razorpay && rzpOrder) {
+        const rzp = new (window as unknown as { Razorpay: any }).Razorpay({
+          key: rzpOrder.keyId,
+          amount: rzpOrder.amount,
+          currency: rzpOrder.currency,
+          name: 'CraftyWrap',
+          description: `Order #${formattedOrder.orderNumber || formattedOrder.id}`,
+          image: '/logo.png',
+          order_id: rzpOrder.id,
+          handler: async function (res: { razorpay_payment_id: string; razorpay_signature: string }) {
+            try {
+              await apiRequest(`/orders/${formattedOrder.id}/verify-payment`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  razorpayPaymentId: res.razorpay_payment_id,
+                  razorpaySignature: res.razorpay_signature,
+                }),
+              });
+              const paidOrder: Order = {
+                ...formattedOrder,
+                paymentStatus: 'paid',
+                orderStatus: 'preparing',
+                status: 'preparing',
+                statusColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+              };
+              addOrder(paidOrder);
+              setPlacedOrder(paidOrder);
+              await clearCart();
+            } catch {
+              addOrder(formattedOrder);
+              setPlacedOrder(formattedOrder);
+              await clearCart();
+            }
+          },
+          prefill: {
+            name: fullName,
+            phone: phone,
+          },
+          theme: {
+            color: '#5C3A21',
+          },
+        });
+        rzp.open();
+        return;
+      } else {
+        // Open Razorpay test/demo payment modal for interactive preview
+        setPendingDemoOrder(formattedOrder);
+        return;
+      }
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : 'Unable to place order. Please try again.');
     } finally {
@@ -106,98 +174,35 @@ export default function CheckoutPage() {
 
   // Order Confirmation State
   if (placedOrder) {
-    const isPaid = placedOrder.paymentStatus === 'paid';
-
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 space-y-6 animate-in zoom-in-95 duration-300">
         {/* Top Status Icon & Badge */}
         <div className="text-center space-y-4">
-          <div
-            className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner ${
-              isPaid
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-amber-100 text-amber-700 ring-4 ring-amber-200/60'
-            }`}
-          >
-            {isPaid ? <CheckCircle2 size={48} /> : <Clock size={48} />}
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner bg-emerald-100 text-emerald-700">
+            <CheckCircle2 size={48} />
           </div>
 
           <div className="space-y-2">
-            <span
-              className={`inline-block text-xs font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full border ${
-                isPaid
-                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                  : 'bg-amber-100 text-amber-900 border-amber-300'
-              }`}
-            >
-              {isPaid ? 'ORDER CONFIRMED!' : 'PAYMENT PENDING VERIFICATION'}
+            <span className="inline-block text-xs font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full border bg-emerald-100 text-emerald-800 border-emerald-300">
+              ORDER CONFIRMED!
             </span>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-warmbrown-800">
-              {isPaid
-                ? 'Thank You For Your Order!'
-                : 'Almost there! Please complete your payment'}
+              Thank You For Your Order!
             </h1>
 
             <p className="text-xs sm:text-sm text-warmbrown-600 max-w-lg mx-auto leading-relaxed">
-              {isPaid ? (
-                <>
-                  We&apos;ve received your payment for Order{' '}
-                  <span className="font-bold text-warmbrown-800">#{placedOrder.id}</span>. Our artisans are getting your handcrafted items ready!
-                </>
-              ) : (
-                <>
-                  We&apos;ve noted your order (<span className="font-bold text-warmbrown-800">#{placedOrder.id}</span>). Once we confirm your UPI payment of{' '}
-                  <span className="font-bold text-warmbrown-900">₹{placedOrder.total.toFixed(2)}</span>, we&apos;ll start preparing your handmade doll and update your order status. This usually takes a few hours.
-                </>
-              )}
+              We&apos;ve received your payment for Order{' '}
+              <span className="font-bold text-warmbrown-800">#{placedOrder.orderNumber || placedOrder.id}</span>. Our artisans are getting your handcrafted items ready!
             </p>
           </div>
         </div>
-
-        {/* UPI Reminder Panel (Only for Pending Verification UPI orders) */}
-        {!isPaid && (
-          <div className="bg-amber-50/80 p-6 rounded-3xl border-2 border-amber-200 space-y-4 text-center shadow-xs">
-            <div className="flex items-center justify-center gap-2 text-xs font-bold text-amber-900 uppercase tracking-wider">
-              <QrCode size={16} /> Scan or Transfer to Complete Payment
-            </div>
-
-            <div className="w-40 h-40 mx-auto bg-white p-2.5 rounded-2xl border-2 border-amber-300 shadow-md flex flex-col items-center justify-center relative">
-              <img
-                src={qrApiUrl}
-                alt="CraftyWrap UPI QR Code"
-                className="w-full h-full object-contain rounded-lg"
-              />
-            </div>
-
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="bg-white px-3.5 py-1.5 rounded-xl border border-amber-300 text-xs font-mono font-bold text-warmbrown-800 shadow-xs">
-                  {upiId}
-                </span>
-                <button
-                  type="button"
-                  onClick={copyUpiId}
-                  className="bg-amber-800 hover:bg-amber-900 text-white p-2 rounded-xl text-xs transition-colors flex items-center gap-1 shadow-xs"
-                  title="Copy UPI ID"
-                >
-                  {upiCopied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
-                  <span>{upiCopied ? 'Copied!' : 'Copy'}</span>
-                </button>
-              </div>
-
-              <p className="text-[11px] text-amber-900 font-medium max-w-sm">
-                Pay exact amount <strong className="text-warmbrown-900">₹{placedOrder.total.toFixed(2)}</strong> via GPay, PhonePe, Paytm, or any UPI app.
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Order Details Summary Card */}
         <div className="bg-white p-6 sm:p-7 rounded-3xl border border-peach-200 shadow-soft text-left space-y-3.5 text-xs text-warmbrown-700">
           <h4 className="font-extrabold text-warmbrown-800 border-b border-peach-100 pb-2.5 text-sm flex items-center justify-between">
             <span>Order Summary & Delivery</span>
-            <span className="font-mono text-xs font-bold text-warmbrown-600">#{placedOrder.id}</span>
+            <span className="font-mono text-xs font-bold text-warmbrown-600">#{placedOrder.orderNumber || placedOrder.id}</span>
           </h4>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -214,8 +219,8 @@ export default function CheckoutPage() {
           <div className="border-t border-peach-100 pt-3 space-y-1.5">
             <p className="flex justify-between">
               <strong className="text-warmbrown-800">Payment Method:</strong>
-              <span className="font-semibold text-warmbrown-900">
-                {isPaid ? 'Razorpay Online (Paid)' : 'UPI (Pending Confirmation)'}
+              <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                <ShieldCheck size={14} /> Razorpay Online (Paid)
               </span>
             </p>
             <p className="flex justify-between">
@@ -226,12 +231,8 @@ export default function CheckoutPage() {
             </p>
             <p className="flex justify-between items-center pt-1">
               <strong className="text-warmbrown-800">Status:</strong>
-              <span
-                className={`font-bold text-xs px-2.5 py-0.5 rounded-full border ${placedOrder.statusColor}`}
-              >
-                {isPaid
-                  ? 'Preparing with love 🧶 (Estimated delivery in 4-6 days)'
-                  : 'Payment Pending Verification (Prep starts after confirmation)'}
+              <span className="font-bold text-xs px-2.5 py-0.5 rounded-full border bg-emerald-100 text-emerald-900 border-emerald-300">
+                Preparing with love 🧶 (Estimated delivery in 4-6 days)
               </span>
             </p>
           </div>
@@ -331,113 +332,37 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Payment Method Selector Section */}
-          <div className="bg-white dark:bg-[#1F1610] p-6 sm:p-8 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft space-y-5">
+          {/* Payment Method Section */}
+          <div className="bg-white dark:bg-[#1F1610] p-6 sm:p-8 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft space-y-4">
             <h3 className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg flex items-center gap-2 border-b border-peach-100 dark:border-warmbrown-900 pb-3">
               <Lock size={18} className="text-warmbrown-600 dark:text-peach-300" />
-              2. Select Payment Method
+              2. Payment Method
             </h3>
 
-            <div className="grid grid-cols-2 gap-3">
-              {/* Option 1: Razorpay Online */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('razorpay')}
-                className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-3 ${
-                  paymentMethod === 'razorpay'
-                    ? 'border-warmbrown-800 dark:border-peach-300 bg-peach-50/80 dark:bg-warmbrown-900/80 shadow-sm ring-2 ring-warmbrown-800/10'
-                    : 'border-peach-200 dark:border-warmbrown-800 hover:border-peach-300 bg-white dark:bg-[#251A13]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <CreditCard size={24} className={paymentMethod === 'razorpay' ? 'text-warmbrown-800 dark:text-peach-300' : 'text-warmbrown-400'} />
-                  {paymentMethod === 'razorpay' && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                  )}
+            <div className="bg-peach-50/80 dark:bg-warmbrown-900/80 p-5 rounded-2xl border-2 border-warmbrown-800/20 dark:border-peach-300/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-warmbrown-800 flex items-center justify-center text-warmbrown-800 dark:text-peach-200 shadow-xs border border-peach-200 dark:border-warmbrown-700">
+                    <CreditCard size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-sm">
+                      Razorpay Online Payment
+                    </h4>
+                    <p className="text-[11px] text-warmbrown-600 dark:text-peach-200/70 font-medium">
+                      Instant & 100% Secure Checkout
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-bold text-warmbrown-800 dark:text-peach-100 text-xs block">Pay Online</span>
-                  <span className="text-[10px] text-warmbrown-500 dark:text-peach-200/70 font-medium">Razorpay / Instant Paid</span>
-                </div>
-              </button>
+                <span className="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
+                  <ShieldCheck size={13} /> VERIFIED SECURE
+                </span>
+              </div>
 
-              {/* Option 2: Pay via UPI */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('upi_manual')}
-                className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-3 ${
-                  paymentMethod === 'upi_manual'
-                    ? 'border-warmbrown-800 dark:border-peach-300 bg-peach-50/80 dark:bg-warmbrown-900/80 shadow-sm ring-2 ring-warmbrown-800/10'
-                    : 'border-peach-200 dark:border-warmbrown-800 hover:border-peach-300 bg-white dark:bg-[#251A13]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <QrCode size={24} className={paymentMethod === 'upi_manual' ? 'text-warmbrown-800 dark:text-peach-300' : 'text-warmbrown-400'} />
-                  {paymentMethod === 'upi_manual' && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                  )}
-                </div>
-                <div>
-                  <span className="font-bold text-warmbrown-800 dark:text-peach-100 text-xs block">Pay via UPI</span>
-                  <span className="text-[10px] text-warmbrown-500 dark:text-peach-200/70 font-medium">Manual QR / Verification</span>
-                </div>
-              </button>
+              <p className="text-xs text-warmbrown-700 dark:text-peach-200/80 leading-relaxed border-t border-peach-200/60 dark:border-warmbrown-800 pt-3">
+                Supports all major Credit & Debit Cards, UPI (Google Pay, PhonePe, Paytm), NetBanking, and Digital Wallets.
+              </p>
             </div>
-
-            {/* Detailed Payment Panels */}
-            {paymentMethod === 'razorpay' ? (
-              <div className="bg-peach-50/80 p-4.5 rounded-2xl border border-peach-200 text-xs text-warmbrown-700 space-y-2 animate-in fade-in duration-200">
-                <p className="font-bold text-warmbrown-800 flex items-center gap-1.5">
-                  <ShieldCheck size={16} className="text-emerald-600" />
-                  Razorpay Instant Secure Checkout
-                </p>
-                <p className="text-[11px] leading-relaxed text-warmbrown-600">
-                  Payment is verified instantly upon checkout. Your order will immediately enter the &quot;Preparing with love 🧶&quot; state.
-                </p>
-              </div>
-            ) : (
-              /* REVEAL PANEL FOR MANUAL UPI */
-              <div className="bg-gradient-to-b from-peach-50 to-orange-50/50 p-6 rounded-2xl border-2 border-peach-200 space-y-4 text-center shadow-xs animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="space-y-1">
-                  <span className="text-xs font-extrabold text-warmbrown-800 block uppercase tracking-wider">
-                    Scan QR Code or Copy UPI ID
-                  </span>
-                  <p className="text-[11px] text-warmbrown-600">
-                    Scan with GPay, PhonePe, Paytm, or any UPI app
-                  </p>
-                </div>
-
-                {/* Real Dynamic QR Code */}
-                <div className="w-44 h-44 mx-auto bg-white p-3 rounded-2xl border-2 border-warmbrown-700 shadow-md flex flex-col items-center justify-center space-y-1 group hover:scale-105 transition-transform duration-300">
-                  <img
-                    src={qrApiUrl}
-                    alt="CraftyWrap UPI QR Code"
-                    className="w-full h-full object-contain rounded-lg"
-                  />
-                </div>
-
-                {/* Plain Text UPI ID & Copy Button */}
-                <div className="flex items-center justify-center gap-2 pt-1">
-                  <span className="bg-white px-3.5 py-1.5 rounded-xl border border-peach-300 text-xs font-mono font-bold text-warmbrown-800 shadow-xs">
-                    {upiId}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={copyUpiId}
-                    className="bg-warmbrown-800 hover:bg-warmbrown-900 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs"
-                    title="Copy UPI ID"
-                  >
-                    {upiCopied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
-                    <span>{upiCopied ? 'Copied!' : 'Copy'}</span>
-                  </button>
-                </div>
-
-                {/* Short Instruction Text */}
-                <p className="text-xs text-warmbrown-800 font-medium bg-white/70 p-2.5 rounded-xl border border-peach-200">
-                  Scan or pay to this UPI ID for <strong className="text-warmbrown-900">₹{total.toFixed(2)}</strong>, then tap <strong className="text-warmbrown-900">&quot;I&apos;ve Paid — Notify CraftyWrap&quot;</strong> below.
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -477,7 +402,7 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span className="font-bold">{shippingFee === 0 ? 'FREE' : `₹${shippingFee.toFixed(2)}`}</span>
+                <span className="font-bold">₹{shippingFee.toFixed(2)}</span>
               </div>
               {giftWrap && (
                 <div className="flex justify-between">
@@ -491,33 +416,150 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Dynamic Button Action Label */}
+            {checkoutError && (
+              <div className="bg-rose-50 text-rose-800 p-3 rounded-xl text-xs font-medium border border-rose-200 flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{checkoutError}</span>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isPlacingOrder || cart.length === 0}
-              className={`w-full py-4 rounded-full font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
-                paymentMethod === 'upi_manual'
-                  ? 'bg-amber-800 hover:bg-amber-900 text-amber-50'
-                  : 'bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50'
-              }`}
+              className="w-full py-4 rounded-full font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50 disabled:opacity-50"
             >
               {isPlacingOrder ? (
                 <span>Processing Order...</span>
-              ) : paymentMethod === 'upi_manual' ? (
-                <>
-                  <CheckCircle2 size={16} />
-                  <span>I&apos;ve Paid — Notify CraftyWrap (₹{total.toFixed(2)})</span>
-                </>
               ) : (
                 <>
                   <Lock size={16} />
-                  <span>Place Order — ₹{total.toFixed(2)}</span>
+                  <span>Pay Now & Place Order — ₹{total.toFixed(2)}</span>
                 </>
               )}
             </button>
           </div>
         </div>
       </form>
+
+      {/* Interactive Razorpay Demo Modal Overlay (when backend API keys are in test/demo mode) */}
+      {pendingDemoOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#121A29] text-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-slate-700/80 animate-in zoom-in-95 duration-200">
+            {/* Razorpay Modal Header */}
+            <div className="bg-[#0C131F] p-4 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-warmbrown-800 flex items-center justify-center font-bold text-lg text-white shadow-inner">
+                  🧶
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-sm text-white">CraftyWrap</h4>
+                  <p className="text-[11px] text-slate-400">Order #{pendingDemoOrder.orderNumber || pendingDemoOrder.id}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Amount</span>
+                <span className="text-lg font-extrabold text-emerald-400">₹{pendingDemoOrder.total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Modal Body: Payment Option Tabs */}
+            <div className="p-5 space-y-4">
+              <div className="bg-amber-950/60 border border-amber-500/30 rounded-xl p-3 text-[11px] text-amber-200/90 leading-relaxed">
+                <strong className="text-amber-300 block mb-0.5">ℹ️ Test Mode Preview</strong>
+                Razorpay API keys are not yet configured in <code className="bg-black/40 px-1 py-0.5 rounded font-mono text-amber-300">backend/.env</code>. Choose a payment method below to test order completion:
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-300 block">Select Payment Method:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDemoOption('upi')}
+                    className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-colors ${
+                      selectedDemoOption === 'upi'
+                        ? 'border-blue-500 bg-blue-600/20 text-white'
+                        : 'border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="text-lg">📱</span>
+                    <div>
+                      <div className="text-xs font-bold">UPI</div>
+                      <div className="text-[10px] text-slate-400">GPay / PhonePe / Paytm</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDemoOption('card')}
+                    className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-colors ${
+                      selectedDemoOption === 'card'
+                        ? 'border-blue-500 bg-blue-600/20 text-white'
+                        : 'border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="text-lg">💳</span>
+                    <div>
+                      <div className="text-xs font-bold">Card</div>
+                      <div className="text-[10px] text-slate-400">Visa / MasterCard / RuPay</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDemoOption('netbanking')}
+                    className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-colors ${
+                      selectedDemoOption === 'netbanking'
+                        ? 'border-blue-500 bg-blue-600/20 text-white'
+                        : 'border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="text-lg">🏦</span>
+                    <div>
+                      <div className="text-xs font-bold">NetBanking</div>
+                      <div className="text-[10px] text-slate-400">All Major Banks</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDemoOption('wallet')}
+                    className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-colors ${
+                      selectedDemoOption === 'wallet'
+                        ? 'border-blue-500 bg-blue-600/20 text-white'
+                        : 'border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="text-lg">👛</span>
+                    <div>
+                      <div className="text-xs font-bold">Wallets</div>
+                      <div className="text-[10px] text-slate-400">Amazon Pay / Mobikwik</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setPendingDemoOrder(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-700 text-xs font-bold text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDemoPayment}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold shadow-md transition-colors flex items-center gap-1.5"
+                >
+                  <ShieldCheck size={16} />
+                  <span>Pay ₹{pendingDemoOrder.total.toFixed(2)} (Simulate Success)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { apiRequest, clearStoredAccessToken, getOrCreateCartToken, getStoredAccessToken, resetCartToken, setStoredAccessToken } from '@/lib/api';
 import { CatalogProduct, toCatalogProduct } from '@/lib/catalog';
 
-export type PaymentMethod = 'razorpay' | 'upi_manual';
+export type PaymentMethod = 'razorpay';
 export type PaymentStatus = 'paid' | 'pending_verification' | 'failed' | 'refunded';
 
 export interface Address {
@@ -92,8 +92,6 @@ interface CartContextType {
   setLatestOrder: (order: Order | null) => void;
   latestOrder: Order | null;
   addOrder: (order: Order) => void;
-  wishlist: string[];
-  toggleWishlist: (productId: string) => Promise<boolean>;
 }
 
 const emptyUser: UserProfile = { name: '', email: '', avatarUrl: '', addresses: [], isLoggedIn: false };
@@ -145,7 +143,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [orders, setOrders] = useState<Order[]>([]);
   const [latestOrder, setLatestOrder] = useState<Order | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [wishlist, setWishlist] = useState<string[]>([]);
+
+  const cartRef = useRef(cart);
+  const quantityTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
 
   const requestOptions = useCallback(() => ({ token: getStoredAccessToken(), cartToken: getOrCreateCartToken() }), []);
 
@@ -171,19 +175,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOrders(remoteOrders.map(normalizeOrder));
   }, [requestOptions]);
 
-  const refreshWishlist = useCallback(async () => {
-    if (!getStoredAccessToken()) {
-      setWishlist([]);
-      return;
-    }
-    try {
-      const items = await apiRequest<Array<{ _id?: string; id?: string }>>('/users/me/wishlist', { token: getStoredAccessToken() });
-      setWishlist(items.map((item) => String(item._id ?? item.id ?? '')));
-    } catch {
-      setWishlist([]);
-    }
-  }, []);
-
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -191,7 +182,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (token) {
           const profile = await apiRequest<Omit<UserProfile, 'isLoggedIn'>>('/users/me', { token });
           setUser({ ...profile, isLoggedIn: true });
-          await Promise.all([refreshOrders(), refreshWishlist()]);
+          await refreshOrders();
         }
       } catch {
         clearStoredAccessToken();
@@ -206,7 +197,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
     void initialize();
-  }, [refreshCart, refreshOrders, refreshWishlist]);
+  }, [refreshCart, refreshOrders]);
 
   const showNotification = useCallback((message: string) => {
     setNotification(message);
@@ -216,8 +207,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const completeAuthentication = useCallback(async (auth: AuthResponse) => {
     setStoredAccessToken(auth.token);
     setUser({ ...auth.user, isLoggedIn: true });
-    await Promise.all([refreshCart(), refreshOrders(), refreshWishlist()]);
-  }, [refreshCart, refreshOrders, refreshWishlist]);
+    await Promise.all([refreshCart(), refreshOrders()]);
+  }, [refreshCart, refreshOrders]);
 
   const login = useCallback(async (email: string, password: string) => {
     const auth = await apiRequest<AuthResponse>('/auth/login', {
@@ -257,53 +248,104 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showNotification('Profile updated.');
   }, [showNotification]);
 
-  const toggleWishlist = useCallback(async (productId: string): Promise<boolean> => {
-    const token = getStoredAccessToken();
-    if (!token) {
-      showNotification('Please sign in to save items to your wishlist.');
-      return false;
-    }
-    const result = await apiRequest<{ wishlisted: boolean }>(`/users/me/wishlist/${encodeURIComponent(productId)}`, {
-      method: 'PUT',
-      token,
-    });
-    if (result.wishlisted) {
-      setWishlist((current) => [...current, productId]);
-      showNotification('Saved to your wishlist.');
-    } else {
-      setWishlist((current) => current.filter((id) => id !== productId));
-      showNotification('Removed from your wishlist.');
-    }
-    return result.wishlisted;
-  }, [showNotification]);
+
 
   const addToCart = useCallback(async (product: CatalogProduct, quantity = 1, customNote = '') => {
-    const remoteCart = await apiRequest<RemoteCart>('/carts/items', {
-      ...requestOptions(),
-      method: 'POST',
-      body: JSON.stringify({ productId: product.databaseId, quantity, customNote }),
+    setCart((currentCart) => {
+      const existingIndex = currentCart.findIndex((item) => item.product.id === product.id);
+      if (existingIndex >= 0) {
+        const updated = [...currentCart];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + quantity,
+        };
+        return updated;
+      }
+      return [...currentCart, { product, quantity, customNote }];
     });
-    applyCart(remoteCart);
     showNotification(`Added "${product.name}" to your cart.`);
-  }, [applyCart, requestOptions, showNotification]);
 
-  const updateQuantity = useCallback(async (productId: string, quantity: number) => {
-    const item = cart.find((cartItem) => cartItem.product.id === productId);
-    if (!item) return;
-    const remoteCart = await apiRequest<RemoteCart>(`/carts/items/${item.product.databaseId}`, {
-      ...requestOptions(), method: 'PATCH', body: JSON.stringify({ quantity }),
+    try {
+      const remoteCart = await apiRequest<RemoteCart>('/carts/items', {
+        ...requestOptions(),
+        method: 'POST',
+        body: JSON.stringify({ productId: product.databaseId, quantity, customNote }),
+      });
+      applyCart(remoteCart);
+    } catch (error) {
+      void refreshCart();
+      showNotification(error instanceof Error ? error.message : 'Unable to add item to cart.');
+    }
+  }, [applyCart, refreshCart, requestOptions, showNotification]);
+
+  const updateQuantity = useCallback(async (productId: string, nextQuantity: number) => {
+    // 1. Update UI state instantly
+    setCart((currentCart) => {
+      if (nextQuantity <= 0) {
+        return currentCart.filter((item) => item.product.id !== productId);
+      }
+      return currentCart.map((item) =>
+        item.product.id === productId ? { ...item, quantity: nextQuantity } : item
+      );
     });
-    applyCart(remoteCart);
-  }, [applyCart, cart, requestOptions]);
+
+    // 2. Debounce backend sync call per product so rapid clicks don't race
+    const existingTimer = quantityTimeoutsRef.current.get(productId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(async () => {
+      quantityTimeoutsRef.current.delete(productId);
+      const targetItem = cartRef.current.find((i: CartItem) => i.product.id === productId);
+
+      try {
+        if (nextQuantity <= 0) {
+          if (targetItem?.product?.databaseId) {
+            await apiRequest(`/carts/items/${targetItem.product.databaseId}`, {
+              ...requestOptions(), method: 'DELETE',
+            });
+          }
+        } else {
+          const dbId = targetItem?.product?.databaseId;
+          if (dbId) {
+            const remoteCart = await apiRequest<RemoteCart>(`/carts/items/${dbId}`, {
+              ...requestOptions(),
+              method: 'PATCH',
+              body: JSON.stringify({ quantity: nextQuantity }),
+            });
+            const next = normalizeCart(remoteCart);
+            setGiftWrapState(next.giftWrap);
+            setGiftNoteState(next.giftNote);
+            setPromoCodeState(next.promoCode);
+          }
+        }
+      } catch (error) {
+        showNotification(error instanceof Error ? error.message : 'Unable to sync quantity.');
+      }
+    }, 350);
+
+    quantityTimeoutsRef.current.set(productId, timer);
+  }, [requestOptions, showNotification]);
 
   const removeFromCart = useCallback(async (productId: string) => {
     const item = cart.find((cartItem) => cartItem.product.id === productId);
     if (!item) return;
-    const remoteCart = await apiRequest<RemoteCart>(`/carts/items/${item.product.databaseId}`, {
-      ...requestOptions(), method: 'DELETE',
-    });
-    applyCart(remoteCart);
-  }, [applyCart, cart, requestOptions]);
+
+    const previousCart = cart;
+
+    setCart((currentCart) => currentCart.filter((cartItem) => cartItem.product.id !== productId));
+
+    try {
+      const remoteCart = await apiRequest<RemoteCart>(`/carts/items/${item.product.databaseId}`, {
+        ...requestOptions(), method: 'DELETE',
+      });
+      applyCart(remoteCart);
+    } catch (error) {
+      setCart(previousCart);
+      showNotification(error instanceof Error ? error.message : 'Unable to remove item.');
+    }
+  }, [applyCart, cart, requestOptions, showNotification]);
 
   const clearCart = useCallback(async () => {
     await apiRequest('/carts/current', { ...requestOptions(), method: 'DELETE' });
@@ -315,7 +357,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     applyCart(remoteCart);
   }, [applyCart, requestOptions]);
 
-  const setGiftWrap = useCallback((value: boolean) => { void updateSettings({ giftWrap: value }).catch((error) => showNotification(error instanceof Error ? error.message : 'Unable to update gift wrap.')); }, [showNotification, updateSettings]);
+  const setGiftWrap = useCallback((value: boolean) => {
+    setGiftWrapState(value);
+    void updateSettings({ giftWrap: value }).catch((error) => {
+      setGiftWrapState(!value);
+      showNotification(error instanceof Error ? error.message : 'Unable to update gift wrap.');
+    });
+  }, [showNotification, updateSettings]);
   const setGiftNote = useCallback((note: string) => { setGiftNoteState(note); void updateSettings({ giftNote: note }).catch((error) => showNotification(error instanceof Error ? error.message : 'Unable to update gift note.')); }, [showNotification, updateSettings]);
   const setPromoCode = useCallback(async (code: string) => { await updateSettings({ promoCode: code || undefined }); }, [updateSettings]);
 
@@ -324,7 +372,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetCartToken();
     setUser(emptyUser);
     setOrders([]);
-    setWishlist([]);
     setCart([]);
     setGiftWrapState(false);
     setGiftNoteState('');
@@ -351,8 +398,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     giftWrap, setGiftWrap, giftNote, setGiftNote, promoCode, setPromoCode,
     user, authLoading, login, register, loginWithGoogle, updateProfile, logout,
     notification, setNotification, orders, refreshOrders, latestOrder, setLatestOrder, addOrder,
-    wishlist, toggleWishlist,
-  }), [addOrder, addToCart, authLoading, cart, clearCart, giftNote, giftWrap, latestOrder, login, loginWithGoogle, logout, notification, orders, promoCode, refreshCart, refreshOrders, register, removeFromCart, setGiftNote, setGiftWrap, setPromoCode, toggleWishlist, updateProfile, updateQuantity, user, wishlist]);
+  }), [addOrder, addToCart, authLoading, cart, clearCart, giftNote, giftWrap, latestOrder, login, loginWithGoogle, logout, notification, orders, promoCode, refreshCart, refreshOrders, register, removeFromCart, setGiftNote, setGiftWrap, setPromoCode, updateProfile, updateQuantity, user]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

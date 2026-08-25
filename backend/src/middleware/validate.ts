@@ -6,10 +6,13 @@ export function validateBody(schema: ZodType): RequestHandler {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
+      const issueDetails = result.error.issues
+        .map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`)
+        .join('; ');
       sendError(
         res,
         400,
-        'Request validation failed.',
+        `Request validation failed: ${issueDetails}`,
         result.error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
       );
       return;

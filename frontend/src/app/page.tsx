@@ -13,7 +13,7 @@ import {
   heroSpringItemVariants,
 } from '@/lib/motion';
 import { apiRequest } from '@/lib/api';
-import { CatalogTheme, toCatalogTheme } from '@/lib/catalog';
+import { CatalogProduct, CatalogTheme, toCatalogProduct, toCatalogTheme } from '@/lib/catalog';
 import {
   Wand2,
   ArrowRight,
@@ -40,6 +40,7 @@ export default function HomePage() {
   const [introKey, setIntroKey] = useState(0);
   const [introState, setIntroState] = useState<IntroState>('loading');
   const [categories, setCategories] = useState<CatalogTheme[]>([]);
+  const [featuredProduct, setFeaturedProduct] = useState<CatalogProduct | null>(null);
 
   useEffect(() => {
     // Play 2-second animated intro on initial session visit
@@ -58,9 +59,15 @@ export default function HomePage() {
 
     const loadHomeData = async () => {
       try {
-        const themesRes = await apiRequest<Omit<CatalogTheme, 'id' | 'badgeColor' | 'bgColor'>[]>('/design-themes', { signal: controller.signal });
+        const [themesRes, featuredRes] = await Promise.all([
+          apiRequest<Omit<CatalogTheme, 'id' | 'badgeColor' | 'bgColor'>[]>('/design-themes', { signal: controller.signal }),
+          apiRequest<Record<string, unknown>>('/products/crochet-sunflower-handbag', { signal: controller.signal }).catch(() => null),
+        ]);
         if (!isCurrent) return;
         setCategories(themesRes.map((theme, index) => toCatalogTheme(theme, index)));
+        if (featuredRes) {
+          setFeaturedProduct(toCatalogProduct(featuredRes as unknown as Parameters<typeof toCatalogProduct>[0]));
+        }
       } catch {
         if (!isCurrent) return;
       } finally {
@@ -159,39 +166,70 @@ export default function HomePage() {
             <div className="w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-gradient-to-tr from-peach-300/40 via-peach-200/30 to-amber-100/50 dark:from-warmbrown-800/40 dark:via-warmbrown-700/30 dark:to-amber-900/20 absolute animate-pulse-soft" />
 
             {/* Main Featured Doll Card */}
-            <motion.div
-              whileHover={{ y: -6, rotate: 1, scale: 1.02 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="relative z-10 bg-white dark:bg-[#251A13] p-4 sm:p-6 rounded-3xl border border-peach-200 dark:border-warmbrown-800 shadow-card max-w-sm w-full space-y-4 cursor-pointer group"
-            >
-              <div className="relative w-full aspect-square rounded-2xl bg-gradient-to-br from-amber-100 via-peach-100 to-rose-100 dark:from-[#32231A] dark:via-[#2B1E16] dark:to-[#38261C] flex items-center justify-center overflow-hidden border dark:border-warmbrown-800">
-                <img
-                  src="/frontpage.jpeg"
-                  alt="Sunflower Handbag"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute top-3 right-3 bg-warmbrown-800 text-peach-100 px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase shadow-xs">
-                  Artisan Pick
-                </div>
-                <div className="absolute bottom-3 left-3 bg-white/90 dark:bg-warmbrown-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-warmbrown-800 dark:text-peach-100 shadow-xs flex items-center gap-1 border dark:border-warmbrown-800">
-                  <Heart size={12} className="text-peach-600 fill-peach-400" /> Sunflower Handbag
-                </div>
-              </div>
+            {(() => {
+              const primaryImg = featuredProduct?.images && featuredProduct.images.length > 1
+                ? featuredProduct.images[1]
+                : featuredProduct?.images && featuredProduct.images.length > 0
+                ? featuredProduct.images[0]
+                : '/frontpage.jpeg';
+              const hoverImg = featuredProduct?.images && featuredProduct.images.length > 1
+                ? featuredProduct.images[0]
+                : null;
+              const prodName = featuredProduct?.name || 'Sunflower Handbag';
+              const prodPrice = 1000;
+              const prodOriginalPrice = 1200;
+              const prodTarget = featuredProduct?.slug || featuredProduct?.id || 'crochet-sunflower-handbag';
 
-              <div className="flex items-center justify-between pt-1">
-                <div>
-                  <span className="text-xs text-warmbrown-500 dark:text-peach-300/60 font-medium">Featured Handcraft</span>
-                  <p className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg">₹1,200.00</p>
-                </div>
+              return (
                 <Link
-                  href="/products/daisy-tote-bag"
-                  className="bg-warmbrown-800 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-warmbrown-900 group-hover:bg-peach-600 transition-colors flex items-center gap-1 border dark:border-white/30"
+                  href={`/products/${prodTarget}`}
+                  className="block relative z-10 max-w-sm w-full cursor-pointer group"
                 >
-                  <span>View Item</span>
-                  <span>&rarr;</span>
+                  <motion.div
+                    whileHover={{ y: -6, rotate: 1, scale: 1.02 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    className="bg-white dark:bg-[#251A13] p-4 sm:p-6 rounded-3xl border border-peach-200 dark:border-warmbrown-800 shadow-card space-y-4"
+                  >
+                    <div className="relative w-full aspect-square rounded-2xl bg-gradient-to-br from-amber-100 via-peach-100 to-rose-100 dark:from-[#32231A] dark:via-[#2B1E16] dark:to-[#38261C] flex items-center justify-center overflow-hidden border dark:border-warmbrown-800">
+                      <img
+                        src={primaryImg}
+                        alt={prodName}
+                        className={`w-full h-full object-cover transition-all duration-500 ${hoverImg ? 'group-hover:opacity-0' : 'group-hover:scale-105'}`}
+                      />
+                      {hoverImg && (
+                        <img
+                          src={hoverImg}
+                          alt={`${prodName} alternate view`}
+                          className="w-full h-full object-cover transition-all duration-500 absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-105"
+                        />
+                      )}
+                      <div className="absolute top-3 right-3 bg-warmbrown-800 text-peach-100 px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase shadow-xs">
+                        Artisan Pick
+                      </div>
+                      <div className="absolute bottom-3 left-3 bg-white/90 dark:bg-warmbrown-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-warmbrown-800 dark:text-peach-100 shadow-xs flex items-center gap-1 border dark:border-warmbrown-800">
+                        <Heart size={12} className="text-peach-600 fill-peach-400" /> {prodName}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <span className="text-xs text-warmbrown-500 dark:text-peach-300/60 font-medium">Featured Handcraft</span>
+                        <div className="flex items-baseline gap-2">
+                          <p className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg">₹{prodPrice.toFixed(2)}</p>
+                          <span className="text-xs text-warmbrown-400 line-through">₹{prodOriginalPrice.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <span
+                        className="bg-warmbrown-800 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-warmbrown-900 group-hover:bg-peach-600 transition-colors flex items-center gap-1 border dark:border-white/30"
+                      >
+                        <span>View Item</span>
+                        <span>&rarr;</span>
+                      </span>
+                    </div>
+                  </motion.div>
                 </Link>
-              </div>
-            </motion.div>
+              );
+            })()}
           </motion.div>
         </div>
       </section>

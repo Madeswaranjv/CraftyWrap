@@ -8,25 +8,25 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { serializeProduct } from '../utils/serializers';
 
 export const productPayloadSchema = z.object({
-  slug: z.string().trim().min(2).max(160),
-  name: z.string().trim().min(2).max(180),
-  productType: z.string().trim().min(2).max(100),
-  designTheme: z.string().trim().min(2).max(100),
-  yarnType: z.string().trim().min(2).max(100),
-  size: z.string().trim().min(2).max(100),
+  slug: z.string().trim().min(1).max(160).optional(),
+  name: z.string().trim().min(1).max(180),
+  productType: z.string().trim().min(1).max(100),
+  designTheme: z.string().trim().min(1).max(100),
+  yarnType: z.string().trim().min(1).max(100),
+  size: z.string().trim().min(1).max(100),
   price: z.number().nonnegative(),
-  originalPrice: z.number().nonnegative().optional(),
+  originalPrice: z.number().nonnegative().optional().nullable(),
   rating: z.number().min(0).max(5).optional(),
   reviewCount: z.number().int().nonnegative().optional(),
-  stockCount: z.number().int().nonnegative(),
-  prepTimeDays: z.number().int().nonnegative(),
-  isBestSeller: z.boolean().optional(),
-  isNew: z.boolean().optional(),
-  description: z.string().trim().min(10).max(5000),
-  highlights: z.array(z.string().trim().min(1).max(300)).max(20),
-  careInstructions: z.string().trim().max(1000).optional(),
-  images: z.array(z.string().url()).max(12).optional(),
-  isActive: z.boolean().optional(),
+  stockCount: z.number().int().nonnegative().optional().default(10),
+  prepTimeDays: z.number().int().nonnegative().optional().default(3),
+  isBestSeller: z.boolean().optional().default(false),
+  isNew: z.boolean().optional().default(false),
+  description: z.string().trim().min(1).max(10000),
+  highlights: z.array(z.string()).optional().default([]),
+  careInstructions: z.string().trim().max(2000).optional().nullable(),
+  images: z.array(z.string()).optional().default([]),
+  isActive: z.boolean().optional().default(true),
 });
 
 function positiveInteger(value: unknown, fallback: number, max: number): number {
@@ -58,7 +58,17 @@ function escapeRegex(value: string): string {
  * into the browser.
  */
 function buildProductFilter(req: Parameters<RequestHandler>[0], exclude?: FacetField): Record<string, unknown> {
-  const filter: Record<string, unknown> = { isActive: true };
+  const filter: Record<string, unknown> = {};
+  const statusParam = queryString(req.query.status);
+  const includeInactive = queryString(req.query.includeInactive) === 'true';
+
+  if (statusParam === 'active') {
+    filter.isActive = true;
+  } else if (statusParam === 'inactive') {
+    filter.isActive = false;
+  } else if (!includeInactive && statusParam !== 'all') {
+    filter.isActive = true;
+  }
   const exactFilters: FacetField[] = ['productType', 'designTheme', 'yarnType', 'size'];
 
   for (const key of exactFilters) {
@@ -176,13 +186,35 @@ export const autocompleteProducts: RequestHandler = asyncHandler(async (req, res
   sendSuccess(res, 200, 'Autocomplete results retrieved.', products.map((product) => serializeProduct(product)));
 });
 
+async function generateUniqueSlug(baseText: string, excludeProductId?: string): Promise<string> {
+  let baseSlug = baseText.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!baseSlug) baseSlug = 'product';
+
+  let candidate = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const existing = await Product.findOne({ slug: candidate, _id: { $ne: excludeProductId } });
+    if (!existing) return candidate;
+    candidate = `${baseSlug}-${counter}`;
+    counter++;
+  }
+}
+
 export const createProduct: RequestHandler = asyncHandler(async (req, res) => {
+  const targetSlug = req.body.slug || req.body.name;
+  req.body.slug = await generateUniqueSlug(targetSlug);
   const product = await Product.create(req.body);
   sendSuccess(res, 201, 'Product created.', serializeProduct(product));
 });
 
 export const updateProduct: RequestHandler = asyncHandler(async (req, res) => {
-  const product = await Product.findByIdAndUpdate(req.params.productId, { $set: req.body }, { new: true, runValidators: true });
+  const productId = Array.isArray(req.params.productId) ? req.params.productId[0] : req.params.productId;
+  if (req.body.slug || req.body.name) {
+    const targetSlug = req.body.slug || req.body.name;
+    req.body.slug = await generateUniqueSlug(targetSlug, productId);
+  }
+  const product = await Product.findByIdAndUpdate(productId, { $set: req.body }, { new: true, runValidators: true });
   if (!product) throw new HttpError(404, 'Product not found.');
   sendSuccess(res, 200, 'Product updated.', serializeProduct(product));
 });
@@ -192,3 +224,15 @@ export const deactivateProduct: RequestHandler = asyncHandler(async (req, res) =
   if (!product) throw new HttpError(404, 'Product not found.');
   sendSuccess(res, 200, 'Product deactivated.', serializeProduct(product));
 });
+
+export const deleteProductPermanently: RequestHandler = asyncHandler(async (req, res) => {
+  const product = await Product.findByIdAndDelete(req.params.productId);
+  if (!product) throw new HttpError(404, 'Product not found.');
+  sendSuccess(res, 200, 'Product permanently deleted.', { id: req.params.productId });
+});
+
+export const clearAllProducts: RequestHandler = asyncHandler(async (_req, res) => {
+  const result = await Product.deleteMany({});
+  sendSuccess(res, 200, 'All products deleted successfully from database.', { deletedCount: result.deletedCount });
+});
+

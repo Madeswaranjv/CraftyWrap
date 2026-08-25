@@ -26,7 +26,7 @@ function CustomOrderContent() {
     refDoll ? `I would like to request a custom variation of "${refDoll}": ` : ''
   );
   const [yarnPreference, setYarnPreference] = useState('Velvet Chenille');
-  const [budget, setBudget] = useState('₹1,500 - ₹3,000');
+  const [budget, setBudget] = useState('₹350 - ₹500');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -90,6 +90,10 @@ function CustomOrderContent() {
 
         <p className="text-xs sm:text-sm text-peach-200/90 max-w-xl mx-auto leading-relaxed">
           From custom pets to unique character plushies, we translate your favorite ideas into handcrafted yarn dolls with love.
+        </p>
+
+        <p className="text-xs sm:text-sm font-semibold text-peach-100 pt-1">
+          Want even more customization then feel free to contact us!
         </p>
       </div>
 
@@ -203,9 +207,10 @@ function CustomOrderContent() {
                 value={budget}
                 onChange={(val) => setBudget(String(val))}
                 options={[
-                  { value: '₹500 - ₹1,500', label: '₹500 - ₹1,500 (Mini Plushies / Keychains)' },
-                  { value: '₹1,500 - ₹3,000', label: '₹1,500 - ₹3,000 (Standard Medium Dolls)' },
-                  { value: '₹3,000 - ₹5,000', label: '₹3,000 - ₹5,000 (Giant / Detailed Custom Art)' },
+                  { value: '₹150 - ₹300', label: '₹150 - ₹300 (Small)' },
+                  { value: '₹350 - ₹500', label: '₹350 - ₹500 (Medium)' },
+                  { value: '₹500 - ₹750', label: '₹500 - ₹750 (Extra Medium)' },
+                  { value: 'Above ₹1,000', label: 'Above ₹1,000 (Large)' },
                 ]}
               />
             </div>
@@ -272,6 +277,31 @@ function CustomOrderContent() {
             <Send size={16} />
             <span>Submit Custom Doll Request</span>
           </button>
+
+          {/* Contact Callout Banner */}
+          <div className="bg-peach-50/80 dark:bg-warmbrown-900/60 p-4 sm:p-5 rounded-2xl border border-peach-200 dark:border-warmbrown-800 text-center space-y-2 mt-4">
+            <p className="text-xs sm:text-sm font-extrabold text-warmbrown-800 dark:text-peach-100">
+              Want even more customization then feel free to contact us!
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+              <a
+                href="https://wa.me/919363515015"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 bg-[#0F6543] hover:bg-[#0B4F34] text-white px-4 py-2 rounded-full text-xs font-bold transition-all shadow-xs"
+              >
+                <WhatsAppLogo size={15} /> WhatsApp (+91 93635 15015)
+              </a>
+              <a
+                href="https://www.instagram.com/crafty_wrap"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 bg-warmbrown-800 hover:bg-warmbrown-900 text-white px-4 py-2 rounded-full text-xs font-bold transition-all shadow-xs"
+              >
+                <InstagramLogo size={15} /> Instagram (@crafty_wrap)
+              </a>
+            </div>
+          </div>
         </form>
       )}
     </div>

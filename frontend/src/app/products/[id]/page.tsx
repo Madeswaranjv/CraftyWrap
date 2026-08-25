@@ -11,7 +11,6 @@ import { WhatsAppLogo } from '@/components/SocialIcons';
 import {
   ShoppingBag,
   Wand2,
-  Heart,
   Clock,
   ShieldCheck,
   Truck,
@@ -19,6 +18,10 @@ import {
   Upload,
   MessageCircle,
   ChevronRight,
+  ChevronLeft,
+  Maximize2,
+  ZoomIn,
+  X,
   Star,
   Check,
 } from 'lucide-react';
@@ -48,6 +51,21 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'description' | 'care' | 'reviews'>('description');
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  const imagesList = product?.images && product.images.length > 0 ? product.images : [];
+
+  const handleNextImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (imagesList.length <= 1) return;
+    setSelectedImageIdx((prev) => (prev + 1) % imagesList.length);
+  };
+
+  const handlePrevImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (imagesList.length <= 1) return;
+    setSelectedImageIdx((prev) => (prev - 1 + imagesList.length) % imagesList.length);
+  };
 
   // Review form state
   const [reviewName, setReviewName] = useState('');
@@ -145,43 +163,163 @@ export default function ProductDetailPage() {
 
       {/* Main Product Showcase Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        {/* Left Column: Image Gallery */}
+        {/* Left Column: Interactive Multi-Image Gallery */}
         <div className="lg:col-span-6 space-y-4">
-          <div className={`w-full aspect-[4/3] rounded-3xl bg-gradient-to-br ${product.imageBg} flex items-center justify-center relative shadow-card border border-peach-200 overflow-hidden`}>
-            <div className="text-9xl animate-float drop-shadow-lg">
-              {renderIcon(product.imageIconName)}
-            </div>
+          <div
+            onClick={() => imagesList.length > 0 && setIsLightboxOpen(true)}
+            className={`w-full aspect-[4/3] rounded-3xl bg-gradient-to-br ${product.imageBg} flex items-center justify-center relative shadow-card border border-peach-200 overflow-hidden cursor-pointer group`}
+          >
+            {imagesList.length > 0 ? (
+              <div className="relative w-full h-full">
+                <img
+                  src={imagesList[selectedImageIdx] || imagesList[0]}
+                  alt={`${product.name} view ${selectedImageIdx + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                
+                {/* Zoom hover indicator prompt */}
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs bg-gradient-to-t from-black/60 via-transparent to-transparent">
+                  <span className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 border border-white/20">
+                    <ZoomIn size={16} /> Click to View Full Screen
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-9xl animate-float drop-shadow-lg select-none">
+                {renderIcon(product.imageIconName)}
+              </div>
+            )}
 
             {/* Badge tags overlay */}
-            <div className="absolute top-4 left-4 flex flex-col gap-1.5">
+            <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
               {product.isBestSeller && (
                 <span className="bg-warmbrown-800 text-peach-100 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
                   Best Seller
                 </span>
               )}
-              <span className="bg-white/90 backdrop-blur-md text-warmbrown-800 text-xs font-bold px-3 py-1 rounded-full border border-peach-200">
+              {product.isNew && (
+                <span className="bg-purple-700 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+                  New Arrival
+                </span>
+              )}
+              <span className="bg-white/90 dark:bg-warmbrown-900/90 backdrop-blur-md text-warmbrown-800 dark:text-peach-100 text-xs font-bold px-3 py-1 rounded-full border border-peach-200 dark:border-warmbrown-800 shadow-xs">
                 {product.yarnType}
               </span>
             </div>
+
+            {/* Slider Navigation Arrows overlay */}
+            {imagesList.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrevImage}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-warmbrown-900/90 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-full shadow-md hover:scale-110 transition-transform border border-peach-200 dark:border-warmbrown-800 z-10"
+                  title="Previous image"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextImage}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-warmbrown-900/90 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-full shadow-md hover:scale-110 transition-transform border border-peach-200 dark:border-warmbrown-800 z-10"
+                  title="Next image"
+                >
+                  <ChevronRight size={18} />
+                </button>
+                
+                {/* Image counter indicator pill */}
+                <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md text-white font-bold text-[11px] px-3 py-1 rounded-full z-10 shadow-md">
+                  {selectedImageIdx + 1} / {imagesList.length}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Thumbnail row */}
-          <div className="flex items-center gap-3">
-            {[0, 1, 2].map((idx) => (
-              <button
-                key={idx}
-                onClick={() => setSelectedImageIdx(idx)}
-                className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${product.imageBg} flex items-center justify-center border-2 transition-all ${
-                  selectedImageIdx === idx
-                    ? 'border-warmbrown-800 scale-105 shadow-md'
-                    : 'border-peach-200 hover:border-peach-300 opacity-70'
-                }`}
-              >
-                <span className="text-2xl">{renderIcon(product.imageIconName)}</span>
-              </button>
-            ))}
-          </div>
+          {/* Interactive Thumbnails Row */}
+          {imagesList.length > 0 ? (
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
+              {imagesList.map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedImageIdx(idx)}
+                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${
+                    selectedImageIdx === idx
+                      ? 'border-warmbrown-800 dark:border-peach-300 scale-105 shadow-md ring-2 ring-warmbrown-800/30'
+                      : 'border-peach-200 dark:border-warmbrown-800 hover:border-warmbrown-400 opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {[0, 1, 2].map((idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedImageIdx(idx)}
+                  className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${product.imageBg} flex items-center justify-center border-2 transition-all ${
+                    selectedImageIdx === idx
+                      ? 'border-warmbrown-800 scale-105 shadow-md'
+                      : 'border-peach-200 hover:border-peach-300 opacity-70'
+                  }`}
+                >
+                  <span className="text-2xl">{renderIcon(product.imageIconName)}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* FULLSCREEN LIGHTBOX MODAL */}
+        {isLightboxOpen && imagesList.length > 0 && (
+          <div
+            onClick={() => setIsLightboxOpen(false)}
+            className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 select-none"
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setIsLightboxOpen(false)}
+              className="absolute top-6 right-6 text-white hover:text-peach-200 bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-colors z-20"
+              title="Close image view"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Main Lightbox Image */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-4xl max-h-[85vh] w-full flex items-center justify-center"
+            >
+              <img
+                src={imagesList[selectedImageIdx] || imagesList[0]}
+                alt={`${product.name} Full Resolution`}
+                className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl"
+              />
+
+              {/* Lightbox Slider Arrows */}
+              {imagesList.length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-110 border border-white/30"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-110 border border-white/30"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-1.5 rounded-full font-bold text-xs">
+                    Image {selectedImageIdx + 1} of {imagesList.length}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Right Column: Details & Actions */}
         <div className="lg:col-span-6 space-y-6 bg-white dark:bg-[#1F1610] p-6 sm:p-8 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft">

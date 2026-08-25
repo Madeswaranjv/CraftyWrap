@@ -22,6 +22,7 @@ import {
   Edit2,
   Check,
   X,
+  ShieldAlert,
 } from 'lucide-react';
 
 export default function AccountPage() {
@@ -33,7 +34,6 @@ export default function AccountPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState(user.name || '');
   const [editPhone, setEditPhone] = useState(user.phone || '');
-  const [editAvatarUrl, setEditAvatarUrl] = useState(user.avatarUrl || '');
   const [profileSaving, setProfileSaving] = useState(false);
 
   // Address Add State
@@ -56,7 +56,6 @@ export default function AccountPage() {
     if (user.isLoggedIn) {
       setEditName(user.name);
       setEditPhone(user.phone || '');
-      setEditAvatarUrl(user.avatarUrl || '');
       setNewFullName(user.name);
       setNewPhone(user.phone || '');
     }
@@ -69,7 +68,6 @@ export default function AccountPage() {
       await updateProfile({
         name: editName.trim(),
         phone: editPhone.trim() || undefined,
-        avatarUrl: editAvatarUrl.trim() || undefined,
       });
       setIsEditingProfile(false);
     } catch {
@@ -115,11 +113,7 @@ export default function AccountPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-peach-200 border-2 border-peach-300 flex items-center justify-center text-warmbrown-800 text-2xl font-bold overflow-hidden shrink-0 shadow-sm relative">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-              ) : (
-                <User size={28} />
-              )}
+              <User size={28} />
             </div>
 
             <div className="space-y-1">
@@ -138,6 +132,14 @@ export default function AccountPage() {
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            {user.role === 'admin' && (
+              <Link
+                href="/admin"
+                className="bg-warmbrown-800 hover:bg-warmbrown-900 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+              >
+                <ShieldAlert size={14} /> Open Admin Console
+              </Link>
+            )}
             <button
               onClick={() => setIsEditingProfile(!isEditingProfile)}
               className="bg-peach-100 hover:bg-peach-200 text-warmbrown-900 px-4 py-2.5 rounded-full text-xs font-bold transition-colors flex items-center justify-center gap-1.5 border border-peach-300"
@@ -170,7 +172,7 @@ export default function AccountPage() {
 
         {/* Inline Profile Edit Form */}
         {isEditingProfile && (
-          <form onSubmit={handleSaveProfile} className="pt-4 border-t border-peach-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <form onSubmit={handleSaveProfile} className="pt-4 border-t border-peach-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
               <label className="font-bold text-warmbrown-800 block mb-1">Full Name</label>
               <input
@@ -191,17 +193,7 @@ export default function AccountPage() {
                 className="w-full bg-peach-50 border border-peach-200 rounded-xl p-2.5 outline-none font-medium"
               />
             </div>
-            <div>
-              <label className="font-bold text-warmbrown-800 block mb-1">Profile Avatar URL</label>
-              <input
-                type="url"
-                value={editAvatarUrl}
-                onChange={(e) => setEditAvatarUrl(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-                className="w-full bg-peach-50 border border-peach-200 rounded-xl p-2.5 outline-none font-medium"
-              />
-            </div>
-            <div className="sm:col-span-3 flex justify-end gap-2 pt-2">
+            <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
               <button
                 type="submit"
                 disabled={profileSaving}

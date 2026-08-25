@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { apiRequest } from '@/lib/api';
 import { CatalogTheme, toCatalogTheme } from '@/lib/catalog';
 import {
@@ -15,11 +14,11 @@ import {
   Menu,
   X,
   Wand2,
-  Heart,
   ChevronDown,
   LayoutGrid,
   Flame,
   LogOut,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface AutocompleteItem {
@@ -31,7 +30,7 @@ interface AutocompleteItem {
 }
 
 export const Header: React.FC = () => {
-  const { cartCount, wishlist, user, logout } = useCart();
+  const { cartCount, user, logout } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
@@ -85,7 +84,7 @@ export const Header: React.FC = () => {
 
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1A120B]/95 backdrop-blur-md border-b border-peach-100 dark:border-warmbrown-900 transition-colors duration-300 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#1A120B]/95 backdrop-blur-md border-b border-peach-100 dark:border-warmbrown-900 transition-colors duration-300 shadow-sm">
       {/* Main Navigation Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
         {/* Brand Logo */}
@@ -208,24 +207,6 @@ export const Header: React.FC = () => {
             />
           </Link>
 
-          {/* Best Sellers Icon (Trending Chart Arrow) */}
-          <Link
-            href="/collections?filter=best-seller"
-            title="Best Sellers"
-            className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs border group hover:-translate-y-0.5 active:scale-95 ${
-              pathname.includes('best-seller')
-                ? 'bg-peach-200 border-peach-300 dark:bg-warmbrown-800 dark:border-warmbrown-700 shadow-xs'
-                : 'bg-peach-100/70 border-peach-200/60 dark:bg-warmbrown-900/80 dark:border-warmbrown-800/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 dark:hover:border-warmbrown-700 hover:shadow-sm'
-            }`}
-          >
-            <Image
-              src="/bestsellers-icon.svg"
-              alt="Best Sellers"
-              width={22}
-              height={22}
-              className="object-contain dark:brightness-0 dark:invert group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:scale-110 transition-transform duration-300"
-            />
-          </Link>
         </nav>
 
         {/* Search Bar */}
@@ -268,35 +249,27 @@ export const Header: React.FC = () => {
           )}
         </div>
 
-        {/* Right Icon Actions: Wishlist, Account & Cart */}
+        {/* Right Icon Actions: Account & Cart */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          {/* Wishlist Link with Badge */}
-          <Link
-            href="/account"
-            title="Wishlist"
-            className="w-9 h-9 sm:w-10 sm:h-10 bg-peach-100/70 dark:bg-warmbrown-900/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-100 rounded-full flex items-center justify-center border border-peach-200/60 dark:border-warmbrown-800 shadow-xs hover:scale-105 transition-transform relative"
-          >
-            <Heart size={18} className={wishlist.length > 0 ? "fill-rose-500 text-rose-500" : "text-warmbrown-700 dark:text-peach-200"} />
-            {wishlist.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
-                {wishlist.length}
-              </span>
-            )}
-          </Link>
 
           {/* Account Profile or Auth Links */}
           {user.isLoggedIn ? (
             <div className="flex items-center gap-1.5">
+              {user.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-extrabold px-3 py-1.5 rounded-full flex items-center gap-1 transition-all shadow-xs shrink-0"
+                  title="Admin Dashboard"
+                >
+                  <ShieldAlert size={14} /> Admin
+                </Link>
+              )}
               <Link
                 href="/account"
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-peach-300 dark:bg-warmbrown-700 hover:bg-peach-400 dark:hover:bg-warmbrown-600 text-warmbrown-900 dark:text-peach-100 flex items-center justify-center font-extrabold text-sm sm:text-base border border-peach-200 dark:border-warmbrown-800 shadow-md transition-transform hover:scale-105 shrink-0"
                 title={`Account (${user.name})`}
               >
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
-                ) : (
-                  user.name?.[0]?.toUpperCase() ?? <User size={18} />
-                )}
+                {user.name?.[0]?.toUpperCase() ?? <User size={18} />}
               </Link>
               <button
                 onClick={() => {
@@ -325,9 +298,6 @@ export const Header: React.FC = () => {
               </Link>
             </div>
           )}
-
-          {/* Theme Toggle Button (Light/Dark Switcher) */}
-          <ThemeToggle className="shrink-0" />
 
           {/* Cart Icon Link */}
           <Link
@@ -423,9 +393,6 @@ export const Header: React.FC = () => {
               <User size={16} />
               {user.isLoggedIn ? `Account (${user.name})` : 'Sign In'}
             </Link>
-            <div className="pt-2 border-t border-peach-100 dark:border-warmbrown-800">
-              <ThemeToggle showLabel={true} />
-            </div>
           </nav>
         </div>
       )}

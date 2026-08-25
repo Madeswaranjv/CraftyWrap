@@ -12,6 +12,9 @@ backend/dist/
 !.env.example
 !.env.*.example
 
+#photos
+
+photos/
 # Logs
 *.log
 logs/

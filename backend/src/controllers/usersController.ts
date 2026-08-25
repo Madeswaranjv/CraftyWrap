@@ -61,26 +61,6 @@ export const setDefaultAddress: RequestHandler = asyncHandler(async (req, res) =
   sendSuccess(res, 200, 'Default address updated.', serializeUser(user));
 });
 
-export const toggleWishlistProduct: RequestHandler = asyncHandler(async (req, res) => {
-  const productId = req.params.productId;
-  const user = await User.findById(req.auth!.userId);
-  if (!user) throw new HttpError(404, 'User not found.');
-  const existingIndex = user.wishlist.findIndex((item: { toString(): string }) => item.toString() === productId);
-  if (existingIndex >= 0) user.wishlist.splice(existingIndex, 1);
-  else user.wishlist.push(productId as never);
-  await user.save();
-  sendSuccess(res, 200, existingIndex >= 0 ? 'Product removed from wishlist.' : 'Product added to wishlist.', {
-    productId,
-    wishlisted: existingIndex < 0,
-  });
-});
-
-export const getWishlist: RequestHandler = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.auth!.userId).populate('wishlist');
-  if (!user) throw new HttpError(404, 'User not found.');
-  sendSuccess(res, 200, 'Wishlist retrieved.', user.wishlist);
-});
-
 export const listUsers: RequestHandler = asyncHandler(async (_req, res) => {
   const users = await User.find().sort({ createdAt: -1 });
   sendSuccess(res, 200, 'Users retrieved.', users.map((user) => serializeUser(user)));

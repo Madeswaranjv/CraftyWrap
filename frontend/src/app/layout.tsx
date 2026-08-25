@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col justify-between antialiased transition-colors duration-300 bg-[#FFFDFA] dark:bg-[#140E0A] text-[#5C3A21] dark:text-[#FDF0E6]">
+      <body className="min-h-screen flex flex-col justify-between antialiased transition-colors duration-300 bg-[#FFFDFA] text-[#5C3A21]">
         <ThemeProvider>
           <CartProvider>
             <Header />

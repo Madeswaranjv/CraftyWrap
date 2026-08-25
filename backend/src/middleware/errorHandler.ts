@@ -12,8 +12,20 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     return;
   }
 
-  if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
-    sendError(res, 409, 'This email is already registered.');
+  if ((error as { type?: string }).type === 'entity.too.large' || (error as { status?: number }).status === 413) {
+    sendError(res, 413, 'Upload payload too large. Please upload smaller image files or fewer photos.');
+    return;
+  }
+
+  if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: number }).code === 11000) {
+    const keyValue = (error as { keyValue?: Record<string, string> }).keyValue;
+    const field = keyValue ? Object.keys(keyValue)[0] : 'field';
+    const val = keyValue ? keyValue[field] : '';
+    if (field === 'email') {
+      sendError(res, 409, 'This email is already registered.');
+    } else {
+      sendError(res, 409, `A product or record with this ${field} ("${val}") already exists.`);
+    }
     return;
   }
 
@@ -22,6 +34,6 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     return;
   }
 
-  console.error(error);
-  sendError(res, 500, 'Unexpected server error.');
+  console.error('Unhandled server error:', error);
+  sendError(res, 500, error instanceof Error ? error.message : 'Unexpected server error occurred.');
 };

@@ -1,7 +1,7 @@
 import { HydratedDocument, model, models, Schema } from 'mongoose';
 import { addressSchema, IAddress, ObjectId } from './shared';
 
-export type PaymentMethod = 'razorpay' | 'upi_manual';
+export type PaymentMethod = 'razorpay';
 export type PaymentStatus = 'paid' | 'pending_verification' | 'failed' | 'refunded';
 export type OrderStatus = 'payment_pending' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
 

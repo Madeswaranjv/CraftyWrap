@@ -62,6 +62,7 @@ const productPresentation: Record<string, { imageBg: string; imageIconName: stri
   'buzzy-bee-keychain': { imageBg: 'from-yellow-300 via-amber-200 to-amber-100', imageIconName: 'Bee' },
   'octopus-towel-hanger': { imageBg: 'from-sky-200 via-blue-100 to-indigo-100', imageIconName: 'Octopus' },
   'daisy-tote-bag': { imageBg: 'from-amber-100 via-peach-100 to-yellow-50', imageIconName: 'ToteBag' },
+  'crochet-sunflower-handbag': { imageBg: 'from-amber-100 via-peach-100 to-yellow-50', imageIconName: 'ToteBag' },
   'sunflower-door-screen': { imageBg: 'from-yellow-200 via-amber-100 to-orange-100', imageIconName: 'DoorScreen' },
   'cherry-bag-charm': { imageBg: 'from-red-200 via-rose-100 to-pink-100', imageIconName: 'Cherry' },
   'frog-mug-mat': { imageBg: 'from-emerald-200 via-green-100 to-lime-100', imageIconName: 'Frog' },

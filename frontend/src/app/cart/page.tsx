@@ -33,8 +33,8 @@ export default function CartPage() {
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
 
-  const giftWrapFee = giftWrap ? 4.99 : 0;
-  const shippingFee = subtotal > 50 || cart.length === 0 ? 0 : 5.99;
+  const giftWrapFee = giftWrap ? 49 : 0;
+  const shippingFee = cart.length === 0 ? 0 : 50;
   const total = Math.max(0, subtotal + giftWrapFee + shippingFee - discount);
 
   const handleApplyPromo = async (e: React.FormEvent) => {
@@ -125,11 +125,21 @@ export default function CartPage() {
             >
               {/* Product Thumbnail & Details */}
               <div className="flex items-center gap-4">
-                <div
-                  className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.product.imageBg} flex items-center justify-center shrink-0 border border-peach-200 text-3xl`}
-                >
-                  {renderIcon(item.product.imageIconName)}
-                </div>
+                {item.product.images && item.product.images.length > 0 && item.product.images[0] ? (
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-peach-200 shadow-inner bg-peach-50 relative">
+                    <img
+                      src={item.product.images[0]}
+                      alt={item.product.name}
+                      className="w-full h-full object-cover rounded-2xl transition-transform duration-300 hover:scale-105"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.product.imageBg} flex items-center justify-center shrink-0 border border-peach-200 text-3xl`}
+                  >
+                    {renderIcon(item.product.imageIconName)}
+                  </div>
+                )}
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold uppercase text-warmbrown-500 bg-peach-50 px-2 py-0.5 rounded-md border border-peach-100">
                     {item.product.category}
@@ -201,7 +211,7 @@ export default function CartPage() {
               />
               <div className="flex items-center gap-2 text-xs font-bold text-warmbrown-800 dark:text-peach-100">
                 <Gift size={16} className="text-peach-600 dark:text-peach-300" />
-                <span>Add Handcrafted Gift Wrapping & Custom Tag (+ ₹4.99)</span>
+                <span>Add Handcrafted Gift Wrapping & Custom Tag (+ ₹49)</span>
               </div>
             </label>
 
@@ -266,13 +276,7 @@ export default function CartPage() {
 
               <div className="flex justify-between">
                 <span>Shipping Estimate</span>
-                <span className="font-bold">
-                  {shippingFee === 0 ? (
-                    <span className="text-emerald-700">FREE (₹50+ orders)</span>
-                  ) : (
-                    `₹${shippingFee.toFixed(2)}`
-                  )}
-                </span>
+                <span className="font-bold">₹{shippingFee.toFixed(2)}</span>
               </div>
 
               {giftWrap && (

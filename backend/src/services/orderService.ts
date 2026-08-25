@@ -10,9 +10,8 @@ import { calculatePromoDiscount } from './promoService';
 import { CartOwner } from './cartService';
 import { HttpError } from '../utils/HttpError';
 
-const GIFT_WRAP_FEE = 4.99;
-const SHIPPING_FEE = 5.99;
-const FREE_SHIPPING_THRESHOLD = 50;
+const GIFT_WRAP_FEE = 49;
+const SHIPPING_FEE = 50;
 
 export interface CheckoutInput {
   owner: CartOwner;
@@ -73,7 +72,7 @@ export async function createOrderFromCart(input: CheckoutInput): Promise<Checkou
   });
 
   const subtotal = Number(orderItems.reduce((sum: number, item: { price: number; quantity: number }) => sum + item.price * item.quantity, 0).toFixed(2));
-  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const shippingFee = SHIPPING_FEE;
   const giftWrapFee = cart.giftWrap ? GIFT_WRAP_FEE : 0;
   const promoCalculation = cart.promoCode ? await calculatePromoDiscount(cart.promoCode, subtotal) : undefined;
   const discountAmount = promoCalculation?.discountAmount ?? 0;

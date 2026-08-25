@@ -16,7 +16,7 @@ const shippingAddressSchema = z.object({
   state: z.string().trim().min(2).max(100),
   pincode: z.string().trim().min(3).max(20),
 });
-export const checkoutSchema = z.object({ guestEmail: z.string().trim().email().optional(), shippingAddress: shippingAddressSchema, paymentMethod: z.enum(['razorpay', 'upi_manual']) });
+export const checkoutSchema = z.object({ guestEmail: z.string().trim().email().optional(), shippingAddress: shippingAddressSchema, paymentMethod: z.enum(['razorpay']) });
 export const razorpayVerificationSchema = z.object({ razorpayPaymentId: z.string().min(1), razorpaySignature: z.string().min(1) });
 export const orderStatusSchema = z.object({ orderStatus: z.enum(['payment_pending', 'preparing', 'shipped', 'delivered', 'cancelled']).optional(), paymentStatus: z.enum(['paid', 'pending_verification', 'failed', 'refunded']).optional(), trackingNumber: z.string().trim().max(120).optional() });
 

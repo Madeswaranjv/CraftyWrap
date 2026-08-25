@@ -32,8 +32,9 @@ export async function seedAllData(): Promise<void> {
 
 export async function autoSeedIfNeeded(): Promise<void> {
   try {
+    if (process.env.AUTO_SEED === 'false') return;
     const productCount = await Product.countDocuments();
-    if (productCount === 0) {
+    if (productCount === 0 && process.env.AUTO_SEED === 'true') {
       console.log('No products found in database. Starting initial seed...');
       await seedAllData();
       console.log('✓ Initial database seeding complete.');

@@ -5,16 +5,14 @@ import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { CatalogProduct } from '@/lib/catalog';
 import { YarnSpinner } from './motion/YarnSpinner';
-import { Heart, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface ProductCardProps {
   product: CatalogProduct;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addToCart, wishlist, toggleWishlist } = useCart();
-  const targetId = product.databaseId || product.id;
-  const isWishlisted = wishlist.includes(targetId);
+  const { addToCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddToCart = () => {
@@ -74,27 +72,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </span>
         )}
 
-        {/* Wishlist Heart Icon */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            void toggleWishlist(targetId);
-          }}
-          className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${
-            isWishlisted
-              ? 'bg-rose-500 text-white shadow-md'
-              : 'bg-white/80 dark:bg-warmbrown-900/80 text-warmbrown-700 dark:text-peach-200 shadow-xs hover:bg-white'
-          }`}
-          title="Save to Wishlist"
-        >
-          <Heart size={15} className={isWishlisted ? 'fill-white' : ''} />
-        </button>
 
-        {/* Product Visual Icon / Artwork */}
-        <Link href={`/products/${product.id}`} prefetch={true} className="w-full h-full flex items-center justify-center">
-          <span className="text-7xl group-hover:scale-110 transition-transform duration-300 drop-shadow-md select-none">
-            {renderIcon(product.imageIconName)}
-          </span>
+
+        {/* Product Image / Visual Artwork */}
+        <Link href={`/products/${product.id}`} prefetch={true} className="w-full h-full flex items-center justify-center relative">
+          {product.images && product.images.length > 0 ? (
+            <div className="relative w-full h-full">
+              <img
+                src={product.images[0]}
+                alt={product.name}
+                className={`w-full h-full object-cover rounded-xl transition-all duration-500 ${
+                  product.images.length > 1 ? 'group-hover:opacity-0' : 'group-hover:scale-105'
+                }`}
+              />
+              {product.images.length > 1 && (
+                <img
+                  src={product.images[1]}
+                  alt={`${product.name} alternate view`}
+                  className="w-full h-full object-cover rounded-xl transition-all duration-500 absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-105"
+                />
+              )}
+            </div>
+          ) : (
+            <span className="text-7xl group-hover:scale-110 transition-transform duration-300 drop-shadow-md select-none">
+              {renderIcon(product.imageIconName)}
+            </span>
+          )}
         </Link>
       </div>
 
