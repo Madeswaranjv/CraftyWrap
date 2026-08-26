@@ -117,7 +117,7 @@ export default function CheckoutPage() {
       const rzpOrder = responseRes.razorpayOrder;
 
       if (isLoaded && (window as unknown as { Razorpay?: any }).Razorpay && rzpOrder) {
-        const rzp = new (window as unknown as { Razorpay: any }).Razorpay({
+        const razorpayOptions = {
           key: rzpOrder.keyId,
           amount: rzpOrder.amount,
           currency: rzpOrder.currency,
@@ -125,6 +125,18 @@ export default function CheckoutPage() {
           description: `Order #${formattedOrder.orderNumber || formattedOrder.id}`,
           image: '/logo.png',
           order_id: rzpOrder.id,
+          prefill: {
+            name: fullName,
+            phone: phone,
+          },
+          theme: {
+            color: '#5C3A21',
+          },
+        };
+        console.log('[Razorpay Checkout.js Initialization Options]:', razorpayOptions);
+
+        const rzp = new (window as unknown as { Razorpay: any }).Razorpay({
+          ...razorpayOptions,
           handler: async function (res: { razorpay_payment_id: string; razorpay_signature: string }) {
             try {
               await apiRequest(`/orders/${formattedOrder.id}/verify-payment`, {

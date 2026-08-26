@@ -142,12 +142,15 @@ export async function createOrderFromCart(input: CheckoutInput): Promise<Checkou
   if (!razorpay) return { order: createdOrder };
 
   try {
-    const razorpayOrder = await razorpay.orders.create({
+    const orderPayload = {
       amount: Math.round(total * 100),
       currency: 'INR',
       receipt: orderNumber,
       notes: { craftywrapOrderNumber: orderNumber },
-    });
+    };
+    console.log('[Razorpay Orders API Request Payload]:', JSON.stringify(orderPayload, null, 2));
+
+    const razorpayOrder = await razorpay.orders.create(orderPayload);
     createdOrder.paymentDetails = { razorpayOrderId: razorpayOrder.id };
     await createdOrder.save();
     return {
