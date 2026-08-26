@@ -1,0 +1,71 @@
+# ==============================================================================
+# CraftyWrap Multi-Container Docker Compose Configuration
+# ==============================================================================
+# This setup runs both the Express backend and Next.js frontend in isolated
+# containers connected via a bridge network.
+#
+# Commands:
+#   Start containers: docker-compose up --build
+#   Stop containers:  docker-compose down
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Backend Service (Express + MongoDB Driver + Razorpay)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: craftywrap-backend
+    # Map port 5000 on localhost to port 5000 inside container
+    ports:
+      - "5000:5000"
+    # Load runtime environment variables from root .env file
+    env_file:
+      - .env
+    environment:
+      - PORT=5000
+      # Allow requests from frontend running on localhost:3000
+      - FRONTEND_ORIGIN=http://localhost:3000
+    restart: unless-stopped
+    networks:
+      - craftywrap-network
+
+  # ----------------------------------------------------------------------------
+  # Frontend Service (Next.js Standalone Production App)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # Inject build-time environment variables for Next.js NEXT_PUBLIC_* scope
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+        NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID:-}
+    container_name: craftywrap-frontend
+    # Map port 3000 on localhost to port 3000 inside container
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+    # Ensure backend initializes first
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - craftywrap-network
+
+# ------------------------------------------------------------------------------
+# Docker Bridge Network Setup
+# ------------------------------------------------------------------------------
+# Creates an isolated virtual network allowing container communication.
+# Services can reference each other using service names as hostname:
+#   e.g., http://backend:5000
+# ------------------------------------------------------------------------------
+networks:
+  craftywrap-network:
+    driver: bridge

@@ -14,14 +14,24 @@ import usersRoutes from './routes/usersRoutes';
 import authRoutes from './routes/authRoutes';
 
 const app = express();
-const frontendOrigins = (process.env.FRONTEND_ORIGIN ?? 'http://localhost:3000')
+
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://craftywrap.com',
+  'https://www.craftywrap.com',
+];
+
+const envOrigins = (process.env.FRONTEND_URL ?? process.env.FRONTEND_ORIGIN ?? '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || frontendOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
       return;
     }

@@ -1,0 +1,15 @@
+# Exclude node_modules so Docker builds clean dependencies inside the container
+node_modules
+
+# Exclude local Next.js build artifacts and logs
+.next
+out
+npm-debug.log
+
+# Exclude environment secrets and git tracking
+.env
+.env.*
+.env.local
+.git
+.gitignore
+README.md

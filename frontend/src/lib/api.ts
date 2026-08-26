@@ -12,7 +12,10 @@ export class ApiError extends Error {
   }
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api';
+export const getApiBaseUrl = (): string => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api';
+export const getAppUrl = (): string => process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
+const apiBaseUrl = getApiBaseUrl();
 
 function parseResponseBody(text: string): unknown {
   try {
