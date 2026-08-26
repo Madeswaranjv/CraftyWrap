@@ -12,9 +12,17 @@ backend/dist/
 !.env.example
 !.env.*.example
 
-#photos
+# Docker & Containerization
+docker-compose.override.yml
+docker-compose.local.yml
+.docker/
+docker-volumes/
+.dockerdata/
+*.tar
 
+# Photos
 photos/
+
 # Logs
 *.log
 logs/
@@ -23,6 +31,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .agents/
+
 # Test and coverage output
 coverage/
 .nyc_output/

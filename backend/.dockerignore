@@ -3,11 +3,15 @@ node_modules
 
 # Exclude local build output and logs
 dist
-npm-debug.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
 
 # Exclude environment secrets and git tracking
 .env
 .env.*
+!.env.example
+!.env.*.example
 .git
 .gitignore
 README.md

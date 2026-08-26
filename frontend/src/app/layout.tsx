@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { CartProvider } from '@/context/CartContext';
+import { GoogleAuthProvider } from '@/components/GoogleAuthProvider';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { NotificationToast } from '@/components/NotificationToast';
@@ -22,14 +23,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col justify-between antialiased transition-colors duration-300 bg-[#FFFDFA] text-[#5C3A21]">
-        <ThemeProvider>
-          <CartProvider>
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <NotificationToast />
-          </CartProvider>
-        </ThemeProvider>
+        <GoogleAuthProvider>
+          <ThemeProvider>
+            <CartProvider>
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+              <NotificationToast />
+            </CartProvider>
+          </ThemeProvider>
+        </GoogleAuthProvider>
       </body>
     </html>
   );
