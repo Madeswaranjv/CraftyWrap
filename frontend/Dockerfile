@@ -31,6 +31,7 @@ COPY . .
 
 # Disable Next.js anonymous telemetry collection.
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV BUILD_STANDALONE=true
 
 # Next.js bakes NEXT_PUBLIC_* environment variables into client-side JS during build time.
 # We accept ARG values during docker build so they can be injected into the build stage.

@@ -23,7 +23,7 @@ services:
       - "5000:5000"
     # Load runtime environment variables from root .env file
     env_file:
-      - .env
+      - backend/.env
     environment:
       - PORT=5000
       # Allow requests from frontend running on localhost:3000
@@ -49,7 +49,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - .env
+      - frontend/.env.local
     environment:
       - PORT=3000
     # Ensure backend initializes first

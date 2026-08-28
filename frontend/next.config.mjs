@@ -4,9 +4,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Standalone output mode automatically traces all imports and bundles only necessary
-  // node_modules into .next/standalone. This reduces Docker image size from ~1GB to ~150MB.
-  output: 'standalone',
+  // Standalone mode is only needed for Docker container builds.
+  // Standard builds (e.g. Vercel deployment) must NOT use standalone output as it causes Vercel 404 errors.
+  ...(process.env.BUILD_STANDALONE === 'true' ? { output: 'standalone' } : {}),
 };
 
 export default nextConfig;
+
