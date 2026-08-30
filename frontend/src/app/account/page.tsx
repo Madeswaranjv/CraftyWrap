@@ -237,7 +237,7 @@ export default function AccountPage() {
                     {/* Header line with status badge */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-peach-100 pb-3 text-xs">
                       <div>
-                        <span className="font-bold text-warmbrown-800 text-sm">#{order.id}</span>
+                        <span className="font-bold text-warmbrown-800 text-sm">#{order.orderNumber || order.id}</span>
                         <span className="text-warmbrown-500 ml-2">Placed on {order.date}</span>
                       </div>
 

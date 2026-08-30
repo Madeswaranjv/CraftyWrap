@@ -65,13 +65,18 @@ interface UserItem {
 
 interface OrderItem {
   _id: string;
-  orderNumber: string;
+  orderNumber?: string;
   user?: { name: string; email: string };
   items: Array<{ name: string; quantity: number; price: number }>;
   total: number;
   paymentMethod: string;
   paymentStatus: string;
   orderStatus: string;
+  paymentDetails?: {
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+    paidAt?: string;
+  };
   createdAt: string;
   shippingAddress: { fullName: string; city: string };
 }
@@ -1583,6 +1588,7 @@ export default function AdminDashboardPage() {
                 <th className="p-3">Customer</th>
                 <th className="p-3">Items</th>
                 <th className="p-3">Total</th>
+                <th className="p-3">Razorpay Details</th>
                 <th className="p-3">Payment Status</th>
                 <th className="p-3">Actions</th>
               </tr>
@@ -1590,10 +1596,16 @@ export default function AdminDashboardPage() {
             <tbody className="divide-y divide-peach-100 dark:divide-warmbrown-900/60">
               {orders.map((ord) => (
                 <tr key={ord._id} className="hover:bg-peach-50/50 dark:hover:bg-warmbrown-900/40">
-                  <td className="p-3 font-mono font-bold text-warmbrown-800 dark:text-peach-100">#{ord._id.slice(-6)}</td>
+                  <td className="p-3 font-mono font-bold text-warmbrown-800 dark:text-peach-100">
+                    {ord.orderNumber || `#${ord._id.slice(-6)}`}
+                  </td>
                   <td className="p-3">{ord.user?.name ?? ord.shippingAddress.fullName}</td>
                   <td className="p-3">{ord.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')}</td>
                   <td className="p-3 font-bold">₹{ord.total.toFixed(2)}</td>
+                  <td className="p-3 font-mono text-[11px] text-warmbrown-600 dark:text-peach-300">
+                    <div>Order: {ord.paymentDetails?.razorpayOrderId || 'N/A'}</div>
+                    <div>Pay: {ord.paymentDetails?.razorpayPaymentId || 'N/A'}</div>
+                  </td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${ord.paymentStatus === 'paid' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'}`}>
                       {ord.paymentStatus}

@@ -40,17 +40,41 @@ export default function CheckoutPage() {
 
   const confirmDemoPayment = async () => {
     if (!pendingDemoOrder) return;
-    const paidOrder: Order = {
-      ...pendingDemoOrder,
-      paymentStatus: 'paid',
-      orderStatus: 'preparing',
-      status: 'preparing',
-      statusColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
-    };
-    addOrder(paidOrder);
-    setPlacedOrder(paidOrder);
-    setPendingDemoOrder(null);
-    await clearCart();
+    try {
+      const demoPaymentId = `pay_demo_${Date.now().toString(36)}`;
+      const demoSignature = `demo_signature_${Date.now().toString(36)}`;
+      await apiRequest(`/orders/${pendingDemoOrder.id}/verify-payment`, {
+        method: 'POST',
+        body: JSON.stringify({
+          razorpayPaymentId: demoPaymentId,
+          razorpaySignature: demoSignature,
+        }),
+      });
+
+      const paidOrder: Order = {
+        ...pendingDemoOrder,
+        paymentStatus: 'paid',
+        orderStatus: 'preparing',
+        status: 'preparing',
+        statusColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+      };
+      addOrder(paidOrder);
+      setPlacedOrder(paidOrder);
+    } catch (err) {
+      console.error('Demo payment verification error:', err);
+      const paidOrder: Order = {
+        ...pendingDemoOrder,
+        paymentStatus: 'paid',
+        orderStatus: 'preparing',
+        status: 'preparing',
+        statusColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+      };
+      addOrder(paidOrder);
+      setPlacedOrder(paidOrder);
+    } finally {
+      setPendingDemoOrder(null);
+      await clearCart();
+    }
   };
 
   // Address form fields
