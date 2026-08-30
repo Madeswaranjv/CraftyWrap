@@ -12,10 +12,15 @@ export class ApiError extends Error {
   }
 }
 
-export const getApiBaseUrl = (): string => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api';
-export const getAppUrl = (): string => process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+export const getApiBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api';
+  return envUrl.replace(/\/+$/, '');
+};
 
-const apiBaseUrl = getApiBaseUrl();
+export const getAppUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  return envUrl.replace(/\/+$/, '');
+};
 
 function parseResponseBody(text: string): unknown {
   try {
@@ -31,23 +36,38 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const { token, cartToken, headers, body, ...requestOptions } = options;
   const isFormData = body instanceof FormData;
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...requestOptions,
-    body,
-    credentials: 'include',
-    headers: {
-      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(cartToken ? { 'X-Cart-Token': cartToken } : {}),
-      ...headers,
-    },
-  });
-  const rawBody = await response.text();
-  const parsed = parseResponseBody(rawBody) as Partial<ApiResponse<T>> | undefined;
-  if (!response.ok || !parsed?.success) {
-    throw new ApiError(response.status, parsed?.message ?? 'Unable to complete the request.', parsed?.errors);
+  const baseUrl = getApiBaseUrl();
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const fullUrl = `${baseUrl}${normalizedPath}`;
+
+  try {
+    const response = await fetch(fullUrl, {
+      ...requestOptions,
+      body,
+      credentials: 'include',
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(cartToken ? { 'X-Cart-Token': cartToken } : {}),
+        ...headers,
+      },
+    });
+    const rawBody = await response.text();
+    const parsed = parseResponseBody(rawBody) as Partial<ApiResponse<T>> | undefined;
+    if (!response.ok || !parsed?.success) {
+      throw new ApiError(response.status, parsed?.message ?? 'Unable to complete the request.', parsed?.errors);
+    }
+    return parsed.data as T;
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.error(`[API Request Error] Failed to fetch ${fullUrl}:`, error);
+    throw new ApiError(
+      0,
+      `Network error: Unable to connect to CraftyWrap server. Please check network or CORS settings. (${error?.message || 'Failed to fetch'})`,
+    );
   }
-  return parsed.data as T;
 }
 
 export function getStoredAccessToken(): string | undefined {

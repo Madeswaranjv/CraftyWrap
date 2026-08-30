@@ -30,17 +30,37 @@ const envOrigins = (process.env.FRONTEND_URL ?? process.env.FRONTEND_ORIGIN ?? '
 
 const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-      return;
-    }
-    callback(new Error('Origin is not allowed by CORS.'));
-  },
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Cart-Token', 'X-Razorpay-Signature'],
-}));
+function isOriginAllowed(origin: string): boolean {
+  if (allowedOrigins.includes(origin)) return true;
+  if (origin.endsWith('.vercel.app')) return true;
+  if (origin.endsWith('.craftywrap.com')) return true;
+  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+  return false;
+}
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || isOriginAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+      console.warn(`[CORS Warning] Origin "${origin}" rejected.`);
+      callback(null, false);
+    },
+    credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Cart-Token',
+      'X-Razorpay-Signature',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  }),
+);
 app.use(
   express.json({
     limit: '50mb',
