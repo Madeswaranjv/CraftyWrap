@@ -12,6 +12,7 @@ import promoCodesRoutes from './routes/promoCodesRoutes';
 import reviewsRoutes from './routes/reviewsRoutes';
 import usersRoutes from './routes/usersRoutes';
 import authRoutes from './routes/authRoutes';
+import razorpayRoutes from './routes/razorpayRoutes';
 
 const app = express();
 
@@ -38,9 +39,18 @@ app.use(cors({
     callback(new Error('Origin is not allowed by CORS.'));
   },
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Cart-Token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Cart-Token', 'X-Razorpay-Signature'],
 }));
-app.use(express.json({ limit: '50mb' }));
+app.use(
+  express.json({
+    limit: '50mb',
+    verify: (req, _res, buf) => {
+      if (buf && buf.length) {
+        (req as any).rawBody = buf;
+      }
+    },
+  }),
+);
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 app.get('/health', (_req, res) => {
@@ -54,6 +64,7 @@ app.use('/api/product-types', productTypesRoutes);
 app.use('/api/design-themes', designThemesRoutes);
 app.use('/api/carts', cartsRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/razorpay', razorpayRoutes);
 app.use('/api/custom-orders', customOrdersRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/promo-codes', promoCodesRoutes);
