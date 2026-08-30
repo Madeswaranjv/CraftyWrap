@@ -13,8 +13,17 @@ export class ApiError extends Error {
 }
 
 export const getApiBaseUrl = (): string => {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api';
-  return envUrl.replace(/\/+$/, '');
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim().length > 0) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1') {
+      return 'https://craftywrap-backend.onrender.com/api';
+    }
+  }
+  return 'http://localhost:5000/api';
 };
 
 export const getAppUrl = (): string => {
