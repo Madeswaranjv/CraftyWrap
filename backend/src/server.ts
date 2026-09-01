@@ -9,8 +9,8 @@ async function startServer(): Promise<void> {
   try {
     await connectDatabase();
     await ensureAdminUser();
-    app.listen(port, () => {
-      console.log(`CraftyWrap backend listening on port ${port}`);
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`CraftyWrap backend listening on port ${port} (0.0.0.0)`);
     });
   } catch (error) {
     console.error('Unable to start CraftyWrap backend:', error);

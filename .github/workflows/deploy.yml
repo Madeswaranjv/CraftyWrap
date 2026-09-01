@@ -71,16 +71,43 @@ jobs:
 
     steps:
       - name: 1. Trigger Backend Render Deploy Hook
+        env:
+          RENDER_BACKEND_DEPLOY_HOOK: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}
         run: |
-          echo "Sending deploy signal to Render for Express Backend..."
-          curl -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}"
-          echo "Backend deploy hook triggered successfully!"
+          if [ -z "$RENDER_BACKEND_DEPLOY_HOOK" ]; then
+            echo "::warning ::'RENDER_BACKEND_DEPLOY_HOOK' secret is not set in GitHub Secrets. Skipping automatic backend redeploy trigger. Add it under Settings -> Secrets and variables -> Actions to enable automatic deploys."
+          else
+            echo "Sending deploy signal to Render for Express Backend..."
+            HTTP_STATUS=$(curl -s -o response.txt -w "%{http_code}" -X POST "$RENDER_BACKEND_DEPLOY_HOOK")
+            echo "Render Response (HTTP $HTTP_STATUS):"
+            cat response.txt || true
+            echo ""
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              echo "Backend deploy hook triggered successfully on Render!"
+            else
+              echo "::error ::Render Backend Deploy Hook failed with HTTP status $HTTP_STATUS"
+              exit 1
+            fi
+          fi
 
       - name: 2. Trigger Frontend Render Deploy Hook
+        env:
+          RENDER_FRONTEND_DEPLOY_HOOK: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}
         run: |
-          echo "Sending deploy signal to Render for Next.js Frontend..."
-          curl -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}"
-          echo "Frontend deploy hook triggered successfully!"
+          if [ -z "$RENDER_FRONTEND_DEPLOY_HOOK" ]; then
+            echo "Note: 'RENDER_FRONTEND_DEPLOY_HOOK' is not set (Frontend is deployed on Vercel or separate provider). Skipping gracefully."
+          else
+            echo "Sending deploy signal to Render for Next.js Frontend..."
+            HTTP_STATUS=$(curl -s -o response.txt -w "%{http_code}" -X POST "$RENDER_FRONTEND_DEPLOY_HOOK")
+            echo "Render Response (HTTP $HTTP_STATUS):"
+            cat response.txt || true
+            echo ""
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              echo "Frontend deploy hook triggered successfully on Render!"
+            else
+              echo "::warning ::Frontend deploy hook returned HTTP $HTTP_STATUS"
+            fi
+          fi
 
 # ==============================================================================
 # ALTERNATIVE APPROACH: Pushing to GitHub Container Registry (GHCR)

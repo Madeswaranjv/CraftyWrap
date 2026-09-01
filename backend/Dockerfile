@@ -40,7 +40,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install strictly production dependencies to keep the image lean and minimize security vulnerabilities.
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy the compiled JavaScript code from the builder stage into the runner stage.
 COPY --from=builder /app/dist ./dist
