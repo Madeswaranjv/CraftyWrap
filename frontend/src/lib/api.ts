@@ -20,7 +20,7 @@ export const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host !== 'localhost' && host !== '127.0.0.1') {
-      return 'https://craftywrap-backend.onrender.com/api';
+      return 'https://craftywrap.onrender.com/api';
     }
   }
   return 'http://localhost:5000/api';

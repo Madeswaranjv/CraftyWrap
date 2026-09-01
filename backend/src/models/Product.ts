@@ -48,7 +48,7 @@ const productSchema = new Schema<IProduct>(
     images: { type: [String], default: [] },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true },
+  { timestamps: true, suppressReservedKeysWarning: true },
 );
 
 productSchema.index({ isActive: 1, productType: 1, designTheme: 1, yarnType: 1, size: 1 });

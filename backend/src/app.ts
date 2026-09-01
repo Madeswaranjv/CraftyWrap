@@ -31,11 +31,13 @@ const envOrigins = (process.env.FRONTEND_URL ?? process.env.FRONTEND_ORIGIN ?? '
 const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
 function isOriginAllowed(origin: string): boolean {
+  if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
-  if (origin.endsWith('.vercel.app')) return true;
-  if (origin.endsWith('.craftywrap.com')) return true;
-  if (origin.endsWith('.onrender.com')) return true;
-  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+  const normalized = origin.toLowerCase();
+  if (normalized.includes('craftywrap.com')) return true;
+  if (normalized.includes('.vercel.app')) return true;
+  if (normalized.includes('.onrender.com')) return true;
+  if (normalized.startsWith('http://localhost:') || normalized.startsWith('http://127.0.0.1:')) return true;
   return false;
 }
 

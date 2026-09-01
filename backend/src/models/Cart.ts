@@ -31,8 +31,8 @@ const cartItemSchema = new Schema<ICartItem>(
 
 const cartSchema = new Schema<ICart>(
   {
-    user: { type: Schema.Types.ObjectId, ref: 'User', sparse: true },
-    cartToken: { type: String, trim: true, sparse: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
+    cartToken: { type: String, trim: true },
     items: { type: [cartItemSchema], default: [] },
     giftWrap: { type: Boolean, default: false },
     giftNote: { type: String, trim: true },
