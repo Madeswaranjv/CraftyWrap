@@ -2,8 +2,9 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Loader2, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductGridSkeleton } from '@/components/skeletons/ProductGridSkeleton';
 import { CustomSelect } from '@/components/CustomSelect';
 import { StaggeredGrid } from '@/components/motion/StaggeredGrid';
 import { apiRequest } from '@/lib/api';
@@ -402,10 +403,7 @@ function CollectionsContent() {
           </button>
         </div>
       ) : isCatalogLoading || !hasInitialFetched ? (
-        <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-16 text-center border border-peach-200 dark:border-warmbrown-800 flex flex-col items-center justify-center gap-3 min-h-[300px] my-6 shadow-xs animate-in fade-in duration-200">
-          <Loader2 size={36} className="animate-spin text-warmbrown-600 dark:text-peach-300" />
-          <p className="text-sm font-semibold text-warmbrown-700 dark:text-peach-200">Loading catalog items...</p>
-        </div>
+        <ProductGridSkeleton count={8} />
       ) : products.length > 0 ? (
         <div className="space-y-8">
           <StaggeredGrid key={productRequestQuery} className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 ${isCatalogLoading ? 'opacity-60' : ''}`}>
@@ -466,10 +464,7 @@ function CollectionsContent() {
           </div>
         </div>
       ) : (
-        <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-16 text-center border border-peach-200 dark:border-warmbrown-800 flex flex-col items-center justify-center gap-3 min-h-[300px] my-6 shadow-xs animate-in fade-in duration-200">
-          <Loader2 size={36} className="animate-spin text-warmbrown-600 dark:text-peach-300" />
-          <p className="text-sm font-semibold text-warmbrown-700 dark:text-peach-200">Loading catalog items...</p>
-        </div>
+        <ProductGridSkeleton count={8} />
       )}
     </div>
   );
@@ -479,11 +474,14 @@ export default function CollectionsPage() {
   return (
     <Suspense
       fallback={
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-16 text-center border border-peach-200 dark:border-warmbrown-800 flex flex-col items-center justify-center gap-3 min-h-[300px] my-6 shadow-xs animate-in fade-in duration-200">
-            <Loader2 size={36} className="animate-spin text-warmbrown-600 dark:text-peach-300" />
-            <p className="text-sm font-semibold text-warmbrown-700 dark:text-peach-200">Loading catalog items...</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <div className="h-10 w-64 bg-warmbrown-200/50 dark:bg-warmbrown-800/50 animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="h-12 bg-white dark:bg-[#1F1610] border border-peach-200/60 dark:border-warmbrown-900/80 animate-pulse" />
+            <div className="h-12 bg-white dark:bg-[#1F1610] border border-peach-200/60 dark:border-warmbrown-900/80 animate-pulse" />
+            <div className="h-12 bg-white dark:bg-[#1F1610] border border-peach-200/60 dark:border-warmbrown-900/80 animate-pulse" />
           </div>
+          <ProductGridSkeleton count={8} />
         </div>
       }
     >

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FAQS } from '@/data/mockData';
 import { CategoryTile } from '@/components/CategoryTile';
+import { CategoryGridSkeleton } from '@/components/skeletons/CategoryGridSkeleton';
 import { InstagramLogo, WhatsAppLogo } from '@/components/SocialIcons';
 import { FadeInSection } from '@/components/motion/FadeInSection';
 import { HeroIntroAnimation } from '@/components/motion/HeroIntroAnimation';
@@ -40,6 +41,7 @@ export default function HomePage() {
   const [introKey, setIntroKey] = useState(0);
   const [introState, setIntroState] = useState<IntroState>('loading');
   const [categories, setCategories] = useState<CatalogTheme[]>([]);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
   const [featuredProduct, setFeaturedProduct] = useState<CatalogProduct | null>(null);
 
   useEffect(() => {
@@ -72,6 +74,7 @@ export default function HomePage() {
         if (!isCurrent) return;
       } finally {
         window.clearTimeout(timeoutId);
+        if (isCurrent) setIsCategoriesLoading(false);
       }
     };
     void loadHomeData();
@@ -253,11 +256,15 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map((cat) => (
-            <CategoryTile key={cat._id || cat.id} category={cat} />
-          ))}
-        </div>
+        {isCategoriesLoading || categories.length === 0 ? (
+          <CategoryGridSkeleton count={12} />
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {categories.map((cat) => (
+              <CategoryTile key={cat._id || cat.id} category={cat} />
+            ))}
+          </div>
+        )}
       </FadeInSection>
 
       {/* 3. CUSTOM ORDER CALLOUT BANNER */}
