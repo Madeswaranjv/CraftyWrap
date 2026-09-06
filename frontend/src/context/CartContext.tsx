@@ -167,12 +167,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applyCart, requestOptions]);
 
   const refreshOrders = useCallback(async () => {
-    if (!getStoredAccessToken()) {
+    try {
+      const remoteOrders = await apiRequest<Record<string, unknown>[]>('/orders/me', requestOptions());
+      setOrders(remoteOrders.map(normalizeOrder));
+    } catch {
       setOrders([]);
-      return;
     }
-    const remoteOrders = await apiRequest<Record<string, unknown>[]>('/orders/me', requestOptions());
-    setOrders(remoteOrders.map(normalizeOrder));
   }, [requestOptions]);
 
   useEffect(() => {
@@ -181,6 +181,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 1. Try cookie-based session first
         const session = await checkAuthSession();
         if (session?.user) {
+          if (session.token) {
+            setStoredAccessToken(session.token);
+          }
           setUser({ ...session.user, isLoggedIn: true } as UserProfile);
           await refreshOrders();
         } else {

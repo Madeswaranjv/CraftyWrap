@@ -48,6 +48,7 @@ export async function apiRequest<T>(
   const baseUrl = getApiBaseUrl();
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const fullUrl = `${baseUrl}${normalizedPath}`;
+  const effectiveToken = token ?? getStoredAccessToken();
 
   try {
     const response = await fetch(fullUrl, {
@@ -56,7 +57,7 @@ export async function apiRequest<T>(
       credentials: 'include',
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
         ...(cartToken ? { 'X-Cart-Token': cartToken } : {}),
         ...headers,
       },
@@ -111,11 +112,15 @@ export function resetCartToken(): string | undefined {
 }
 
 /** Check if an active cookie-based session exists by calling /auth/me */
-export async function checkAuthSession(): Promise<{ user: { id?: string; name: string; email: string; avatarUrl?: string; phone?: string; role?: string; addresses: unknown[] } } | null> {
+export async function checkAuthSession(): Promise<{ user: { id?: string; name: string; email: string; avatarUrl?: string; phone?: string; role?: string; addresses: unknown[] }; token?: string } | null> {
   try {
-    return await apiRequest<{ user: { id?: string; name: string; email: string; avatarUrl?: string; phone?: string; role?: string; addresses: unknown[] } }>('/auth/me', {
+    const data = await apiRequest<{ user: { id?: string; name: string; email: string; avatarUrl?: string; phone?: string; role?: string; addresses: unknown[] }; token?: string }>('/auth/me', {
       method: 'GET',
     });
+    if (data?.token) {
+      setStoredAccessToken(data.token);
+    }
+    return data;
   } catch {
     return null;
   }

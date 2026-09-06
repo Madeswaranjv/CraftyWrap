@@ -27,20 +27,22 @@ const COOKIE_NAME = 'cw_token';
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function setAuthCookie(res: Response, token: string): void {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   });
 }
 
 function clearAuthCookie(res: Response): void {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
   });
 }
@@ -90,10 +92,17 @@ export const login: RequestHandler = asyncHandler(async (req, res) => {
 });
 
 export const googleLogin: RequestHandler = asyncHandler(async (req, res) => {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim() || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
   if (!clientId) throw new HttpError(503, 'Google login has not been configured.');
-  const ticket = await new OAuth2Client(clientId).verifyIdToken({ idToken: req.body.credential, audience: clientId });
-  const payload = ticket.getPayload();
+
+  let payload;
+  try {
+    const ticket = await new OAuth2Client(clientId).verifyIdToken({ idToken: req.body.credential, audience: clientId });
+    payload = ticket.getPayload();
+  } catch (error: any) {
+    throw new HttpError(401, error?.message || 'Google account verification failed. Please try again.');
+  }
+
   if (!payload?.sub || !payload.email || !payload.email_verified) throw new HttpError(401, 'Google account could not be verified.');
 
   const user = await User.findOneAndUpdate(
@@ -117,7 +126,7 @@ export const getMe: RequestHandler = asyncHandler(async (req, res) => {
     clearAuthCookie(res);
     throw new HttpError(401, 'User not found.');
   }
-  sendSuccess(res, 200, 'Authenticated.', { user: serializeAuthUser(user) });
+  sendSuccess(res, 200, 'Authenticated.', { user: serializeAuthUser(user), token });
 });
 
 export const logoutHandler: RequestHandler = (_req, res) => {
