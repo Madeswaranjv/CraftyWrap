@@ -109,3 +109,23 @@ export function resetCartToken(): string | undefined {
   window.localStorage.removeItem('craftywrap_cart_token');
   return getOrCreateCartToken();
 }
+
+/** Check if an active cookie-based session exists by calling /auth/me */
+export async function checkAuthSession(): Promise<{ user: { id?: string; name: string; email: string; avatarUrl?: string; phone?: string; role?: string; addresses: unknown[] } } | null> {
+  try {
+    return await apiRequest<{ user: { id?: string; name: string; email: string; avatarUrl?: string; phone?: string; role?: string; addresses: unknown[] } }>('/auth/me', {
+      method: 'GET',
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Clear the server-side auth cookie */
+export async function logoutSession(): Promise<void> {
+  try {
+    await apiRequest('/auth/logout', { method: 'POST' });
+  } catch {
+    // Ignore errors during logout — cookie may already be expired
+  }
+}

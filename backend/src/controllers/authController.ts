@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
-import type { RequestHandler } from 'express';
+import type { RequestHandler, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 import { User } from '../models/User';
 import { mergeGuestCart } from '../services/cartService';
-import { signAccessToken } from '../utils/auth';
+import { signAccessToken, verifyAccessToken } from '../utils/auth';
 import { HttpError } from '../utils/HttpError';
 import { sendSuccess } from '../utils/apiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -23,13 +23,37 @@ export const loginSchema = z.object({
 });
 export const googleSchema = z.object({ credential: z.string().min(20), cartToken: z.string().min(16).max(200).optional() });
 
+const COOKIE_NAME = 'cw_token';
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function setAuthCookie(res: Response, token: string): void {
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  });
+}
+
+function clearAuthCookie(res: Response): void {
+  res.clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  });
+}
+
 function serializeAuthUser(user: { _id: { toString(): string }; name: string; email: string; avatarUrl?: string; phone?: string; role: string; addresses: unknown[] }) {
   return { id: user._id.toString(), name: user.name, email: user.email, avatarUrl: user.avatarUrl, phone: user.phone, role: user.role, addresses: user.addresses };
 }
 
-async function completeLogin(user: Parameters<typeof serializeAuthUser>[0], cartToken?: string) {
+async function completeLogin(res: Response, user: Parameters<typeof serializeAuthUser>[0], cartToken?: string) {
   if (cartToken) await mergeGuestCart(user._id.toString(), cartToken);
-  return { token: signAccessToken({ userId: user._id.toString(), role: user.role as 'customer' | 'admin' }), user: serializeAuthUser(user) };
+  const token = signAccessToken({ userId: user._id.toString(), role: user.role as 'customer' | 'admin' });
+  setAuthCookie(res, token);
+  return { token, user: serializeAuthUser(user) };
 }
 
 export const register: RequestHandler = asyncHandler(async (req, res) => {
@@ -49,7 +73,7 @@ export const register: RequestHandler = asyncHandler(async (req, res) => {
     role: 'customer',
   });
   if (!user) throw new HttpError(500, 'Unable to create account.');
-  sendSuccess(res, 201, 'Welcome to CraftyWrap!', await completeLogin(user, cartToken));
+  sendSuccess(res, 201, 'Welcome to CraftyWrap!', await completeLogin(res, user, cartToken));
 });
 
 export const login: RequestHandler = asyncHandler(async (req, res) => {
@@ -62,7 +86,7 @@ export const login: RequestHandler = asyncHandler(async (req, res) => {
   if (!user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
     throw new HttpError(401, 'Incorrect password. Please try again.');
   }
-  sendSuccess(res, 200, 'Signed in successfully.', await completeLogin(user, cartToken));
+  sendSuccess(res, 200, 'Signed in successfully.', await completeLogin(res, user, cartToken));
 });
 
 export const googleLogin: RequestHandler = asyncHandler(async (req, res) => {
@@ -77,5 +101,26 @@ export const googleLogin: RequestHandler = asyncHandler(async (req, res) => {
     { $set: { googleId: payload.sub, name: payload.name ?? payload.email.split('@')[0], avatarUrl: payload.picture, email: payload.email.toLowerCase() }, $setOnInsert: { role: 'customer' } },
     { upsert: true, new: true, runValidators: true },
   );
-  sendSuccess(res, 200, 'Signed in with Google.', await completeLogin(user, req.body.cartToken));
+  sendSuccess(res, 200, 'Signed in with Google.', await completeLogin(res, user, req.body.cartToken));
 });
+
+export const getMe: RequestHandler = asyncHandler(async (req, res) => {
+  // Try cookie first, then Authorization header
+  const token = req.cookies?.cw_token
+    ?? (req.header('authorization')?.startsWith('Bearer ') ? req.header('authorization')!.slice(7).trim() : undefined);
+  if (!token) {
+    throw new HttpError(401, 'Not authenticated.');
+  }
+  const { userId } = verifyAccessToken(token);
+  const user = await User.findById(userId);
+  if (!user) {
+    clearAuthCookie(res);
+    throw new HttpError(401, 'User not found.');
+  }
+  sendSuccess(res, 200, 'Authenticated.', { user: serializeAuthUser(user) });
+});
+
+export const logoutHandler: RequestHandler = (_req, res) => {
+  clearAuthCookie(res);
+  sendSuccess(res, 200, 'Signed out successfully.', null);
+};

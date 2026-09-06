@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { apiRequest, clearStoredAccessToken, getOrCreateCartToken, getStoredAccessToken, resetCartToken, setStoredAccessToken } from '@/lib/api';
+import { apiRequest, checkAuthSession, clearStoredAccessToken, getOrCreateCartToken, getStoredAccessToken, logoutSession, resetCartToken, setStoredAccessToken } from '@/lib/api';
 import { CatalogProduct, toCatalogProduct } from '@/lib/catalog';
 
 export type PaymentMethod = 'razorpay';
@@ -178,11 +178,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initialize = async () => {
       try {
-        const token = getStoredAccessToken();
-        if (token) {
-          const profile = await apiRequest<Omit<UserProfile, 'isLoggedIn'>>('/users/me', { token });
-          setUser({ ...profile, isLoggedIn: true });
+        // 1. Try cookie-based session first
+        const session = await checkAuthSession();
+        if (session?.user) {
+          setUser({ ...session.user, isLoggedIn: true } as UserProfile);
           await refreshOrders();
+        } else {
+          // 2. Fallback: try localStorage token
+          const token = getStoredAccessToken();
+          if (token) {
+            const profile = await apiRequest<Omit<UserProfile, 'isLoggedIn'>>('/users/me', { token });
+            setUser({ ...profile, isLoggedIn: true });
+            await refreshOrders();
+          }
         }
       } catch {
         clearStoredAccessToken();
@@ -368,6 +376,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setPromoCode = useCallback(async (code: string) => { await updateSettings({ promoCode: code || undefined }); }, [updateSettings]);
 
   const logout = useCallback(() => {
+    // Clear server-side cookie
+    void logoutSession();
     clearStoredAccessToken();
     resetCartToken();
     setUser(emptyUser);

@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import { errorHandler, notFound } from './middleware/errorHandler';
@@ -15,6 +16,7 @@ import authRoutes from './routes/authRoutes';
 import razorpayRoutes from './routes/razorpayRoutes';
 
 const app = express();
+app.use(cookieParser());
 
 const defaultOrigins = [
   'http://localhost:3000',

@@ -5,10 +5,15 @@ import { HttpError } from '../utils/HttpError';
 
 function readBearerToken(req: Request): string | undefined {
   const authorization = req.header('authorization');
-  if (!authorization?.startsWith('Bearer ')) {
-    return undefined;
+  if (authorization?.startsWith('Bearer ')) {
+    return authorization.slice('Bearer '.length).trim();
   }
-  return authorization.slice('Bearer '.length).trim();
+  // Fallback: read from HttpOnly cookie
+  const cookieToken = req.cookies?.cw_token;
+  if (cookieToken && typeof cookieToken === 'string') {
+    return cookieToken;
+  }
+  return undefined;
 }
 
 export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
