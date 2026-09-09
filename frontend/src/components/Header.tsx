@@ -168,7 +168,11 @@ export const Header: React.FC = () => {
                     className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium hover:bg-peach-50 dark:hover:bg-warmbrown-900/80 text-warmbrown-800 dark:text-peach-100 hover:text-warmbrown-900 transition-colors"
                   >
                     <span className="flex items-center gap-2">
-                      <span>{theme.icon}</span>
+                      {theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
+                        <img src={theme.icon} alt={theme.name} className="h-4 w-auto max-w-[32px] object-contain rounded inline-block" />
+                      ) : (
+                        <span>{theme.icon}</span>
+                      )}
                       <span>{theme.name}</span>
                     </span>
                     <span className="text-xs text-warmbrown-500 dark:text-peach-300/70 font-semibold">
@@ -365,8 +369,14 @@ export const Header: React.FC = () => {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-2 p-2 rounded-lg bg-peach-50 text-xs text-warmbrown-800 font-medium"
                 >
-                  <span>{cat.icon}</span>
-                  <span>{cat.name}</span>
+                  <span className="flex items-center gap-2">
+                    {cat.icon?.startsWith('data:image') || cat.icon?.startsWith('http') || cat.icon?.startsWith('/') ? (
+                      <img src={cat.icon} alt={cat.name} className="h-4 w-auto max-w-[32px] object-contain rounded inline-block" />
+                    ) : (
+                      <span>{cat.icon}</span>
+                    )}
+                    <span>{cat.name}</span>
+                  </span>
                 </Link>
               ))}
             </div>

@@ -359,7 +359,11 @@ function CollectionsContent() {
                 : 'border-transparent text-warmbrown-500 dark:text-peach-300/60 hover:text-warmbrown-800 dark:hover:text-peach-100'
             }`}
           >
-            <span>{theme.icon}</span>
+            {theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
+              <img src={theme.icon} alt={theme.name} className="h-4 w-auto max-w-[32px] object-contain rounded inline-block" />
+            ) : (
+              <span>{theme.icon}</span>
+            )}
             <span>{theme.name}</span>
           </button>
         ))}

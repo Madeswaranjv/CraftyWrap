@@ -20,8 +20,12 @@ export const CategoryTile: React.FC<CategoryTileProps> = ({ category }) => {
       <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-peach-200/30 dark:bg-warmbrown-800/30 rounded-full group-hover:scale-150 transition-transform duration-500" />
 
       <div className="flex items-start justify-between z-10">
-        <span className="text-4xl group-hover:scale-110 transition-transform duration-300">
-          {category.icon}
+        <span className="text-4xl group-hover:scale-110 transition-transform duration-300 flex items-center">
+          {category.icon?.startsWith('data:image') || category.icon?.startsWith('http') || category.icon?.startsWith('/') ? (
+            <img src={category.icon} alt={category.name} className="h-9 w-auto max-w-[80px] object-contain rounded" />
+          ) : (
+            category.icon
+          )}
         </span>
         <div className="w-8 h-8 rounded-full bg-white dark:bg-warmbrown-900/80 text-warmbrown-700 dark:text-peach-200 border border-peach-200/60 dark:border-warmbrown-800 flex items-center justify-center shadow-xs group-hover:bg-warmbrown-900 dark:group-hover:bg-[#FFF9F4] group-hover:text-peach-50 dark:group-hover:text-warmbrown-900 group-hover:border-warmbrown-900 dark:group-hover:border-peach-200 transition-all duration-300 group-hover:scale-110">
           <ArrowUpRight size={16} />

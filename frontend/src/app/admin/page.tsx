@@ -141,6 +141,14 @@ const COMMON_PRODUCT_TYPES = [
   'Coasters',
   'Head Clips',
   'Hair Bands',
+  'Hand Bags',
+  'Handbags',
+  'Wall Hanging',
+  'Toys',
+  'Decorations',
+  'Towel Hanging',
+  'Hamper',
+  'Pencil Toppers',
 ];
 
 const COMMON_DESIGN_THEMES = [
@@ -152,6 +160,13 @@ const COMMON_DESIGN_THEMES = [
   'Flowers',
   'Fantasy',
   'Insects',
+  'Marvel',
+  'Anime',
+  'Gods',
+  'Vehicles',
+  'Miniatures',
+  'Cartoon',
+  'Pinky',
 ];
 
 const COMMON_YARN_TYPES = [
@@ -160,7 +175,31 @@ const COMMON_YARN_TYPES = [
   'Organic Bamboo',
   'Chunky Wool',
   'Soft Acrylic',
+  'Japanese Cashmilon',
 ];
+
+function isImageIcon(icon?: string): boolean {
+  if (!icon) return false;
+  return (
+    icon.startsWith('data:image') ||
+    icon.startsWith('http') ||
+    icon.startsWith('/') ||
+    icon.endsWith('.svg') ||
+    icon.endsWith('.png') ||
+    icon.endsWith('.jpg')
+  );
+}
+
+function renderThemeIcon(
+  icon?: string,
+  name: string = 'Theme',
+  imgClass: string = 'h-7 w-auto max-w-[64px] object-contain rounded shrink-0 shadow-2xs'
+): React.ReactNode {
+  if (isImageIcon(icon)) {
+    return <img src={icon} alt={name} className={imgClass} />;
+  }
+  return <span className="text-3xl shrink-0">{icon || '🧶'}</span>;
+}
 
 export default function AdminDashboardPage() {
   const { user } = useCart();
@@ -1906,14 +1945,20 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Icon / Emoji *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-warmbrown-700 dark:text-peach-200">Icon / Logo / Emoji *</label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-warmbrown-500">Preview:</span>
+                    {renderThemeIcon(editThemeIcon, editThemeName, 'h-5 w-auto max-w-[40px] object-contain rounded')}
+                  </div>
+                </div>
                 <input
                   type="text"
                   required
                   value={editThemeIcon}
                   onChange={(e) => setEditThemeIcon(e.target.value)}
-                  className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
-                  placeholder="Emoji (e.g., 🥷 or 🧶)"
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 font-mono text-xs"
+                  placeholder="Emoji (e.g., 🥷) or Logo (e.g., /marvel-logo.svg)"
                 />
               </div>
 
@@ -2093,7 +2138,7 @@ export default function AdminDashboardPage() {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <input type="text" placeholder="Theme Name" required value={newThemeName} onChange={(e) => setNewThemeName(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
-              <input type="text" placeholder="Icon (Emoji)" required value={newThemeIcon} onChange={(e) => setNewThemeIcon(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
+              <input type="text" placeholder="Icon (Emoji or /logo.svg)" required value={newThemeIcon} onChange={(e) => setNewThemeIcon(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none font-mono" />
               <input type="text" placeholder="Description" value={newThemeDesc} onChange={(e) => setNewThemeDesc(e.target.value)} className="bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 p-2.5 rounded-xl outline-none" />
             </div>
             <button type="submit" className="bg-warmbrown-800 dark:bg-warmbrown-700 text-white px-5 py-2 rounded-full text-xs font-bold">Add Theme</button>
@@ -2103,7 +2148,7 @@ export default function AdminDashboardPage() {
             {themes.map((t) => (
               <div key={t._id || t.id} className="bg-white dark:bg-[#1F1610] p-4 rounded-2xl border border-peach-200 dark:border-warmbrown-900/80 flex items-center justify-between gap-3 group hover:border-warmbrown-300 dark:hover:border-warmbrown-700 transition-all shadow-xs">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <span className="text-3xl shrink-0">{t.icon || '🧶'}</span>
+                  {renderThemeIcon(t.icon, t.name)}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-warmbrown-800 dark:text-peach-100 text-sm truncate">{t.name}</h4>
