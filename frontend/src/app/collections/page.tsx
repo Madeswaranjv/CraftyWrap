@@ -407,17 +407,48 @@ function CollectionsContent() {
             Try Again
           </button>
         </div>
-      ) : isCatalogLoading || !hasInitialFetched ? (
+      ) : !hasInitialFetched ? (
         <ProductGridSkeleton count={8} />
-      ) : products.length > 0 ? (
+      ) : (
         <div className="space-y-8">
-          <StaggeredGrid key={productRequestQuery} className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 ${isCatalogLoading ? 'opacity-60' : ''}`}>
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </StaggeredGrid>
+          {/* Product Grid / Loading State */}
+          {isCatalogLoading ? (
+            <ProductGridSkeleton count={products.length > 0 ? products.length : 8} />
+          ) : products.length > 0 ? (
+            <StaggeredGrid key={productRequestQuery} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </StaggeredGrid>
+          ) : hasActiveFilters ? (
+            /* Empty State Safeguard when filters match 0 products */
+            <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-12 text-center border border-peach-200 dark:border-warmbrown-800 space-y-4 my-6 shadow-xs">
+              <span className="text-6xl block">🧶</span>
+              <h3 className="text-xl font-extrabold text-warmbrown-800 dark:text-peach-100">
+                No products found matching active filters
+              </h3>
+              <p className="text-xs sm:text-sm text-warmbrown-600 dark:text-peach-200/70 max-w-md mx-auto leading-relaxed">
+                {catalogParams.search ? (
+                  <>No items match search term <span className="font-bold text-warmbrown-800 dark:text-peach-100">“{catalogParams.search}”</span> under category <span className="font-bold text-warmbrown-800 dark:text-peach-100">{catalogParams.theme}</span>.</>
+                ) : (
+                  <>No items found in <span className="font-bold text-warmbrown-800 dark:text-peach-100">{catalogParams.theme}</span> matching your price filter.</>
+                )}
+              </p>
+              <div className="pt-2 flex flex-wrap justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="bg-warmbrown-800 dark:bg-warmbrown-700 hover:bg-warmbrown-900 text-white px-7 py-3 rounded-full text-xs font-bold transition-colors shadow-md"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            </div>
+          ) : (
+            <ProductGridSkeleton count={8} />
+          )}
 
-          {/* Pagination Navigation Controls */}
+          {/* Pagination Navigation Controls - PERSISTENT AT ALL TIMES */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-center pt-6 pb-2">
               <Pagination
@@ -429,32 +460,6 @@ function CollectionsContent() {
             </div>
           )}
         </div>
-      ) : hasActiveFilters ? (
-        /* Empty State Safeguard when filters match 0 products */
-        <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-12 text-center border border-peach-200 dark:border-warmbrown-800 space-y-4 my-6 shadow-xs">
-          <span className="text-6xl block">🧶</span>
-          <h3 className="text-xl font-extrabold text-warmbrown-800 dark:text-peach-100">
-            No products found matching active filters
-          </h3>
-          <p className="text-xs sm:text-sm text-warmbrown-600 dark:text-peach-200/70 max-w-md mx-auto leading-relaxed">
-            {catalogParams.search ? (
-              <>No items match search term <span className="font-bold text-warmbrown-800 dark:text-peach-100">“{catalogParams.search}”</span> under category <span className="font-bold text-warmbrown-800 dark:text-peach-100">{catalogParams.theme}</span>.</>
-            ) : (
-              <>No items found in <span className="font-bold text-warmbrown-800 dark:text-peach-100">{catalogParams.theme}</span> matching your price filter.</>
-            )}
-          </p>
-          <div className="pt-2 flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="bg-warmbrown-800 dark:bg-warmbrown-700 hover:bg-warmbrown-900 text-white px-7 py-3 rounded-full text-xs font-bold transition-colors shadow-md"
-            >
-              Clear All Filters
-            </button>
-          </div>
-        </div>
-      ) : (
-        <ProductGridSkeleton count={8} />
       )}
     </div>
   );
