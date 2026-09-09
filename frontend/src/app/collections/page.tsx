@@ -3,6 +3,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Pagination } from '@/components/ui/pagination';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/skeletons/ProductGridSkeleton';
 import { CustomSelect } from '@/components/CustomSelect';
@@ -418,28 +419,13 @@ function CollectionsContent() {
 
           {/* Pagination Navigation Controls */}
           {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => updateCatalogParams({ page: catalogParams.page - 1 })}
-                disabled={catalogParams.page <= 1 || isCatalogLoading}
-                className="inline-flex items-center gap-1 rounded-full border border-peach-200 dark:border-warmbrown-800 bg-white dark:bg-[#1F1610] px-4 py-2 text-xs font-bold text-warmbrown-700 dark:text-peach-200 hover:bg-peach-50 dark:hover:bg-warmbrown-900 transition-colors disabled:opacity-50"
-              >
-                <ChevronLeft size={15} /> Previous
-              </button>
-
-              <span className="text-xs font-bold text-warmbrown-700 dark:text-peach-200">
-                Page {pagination.page} of {pagination.totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => updateCatalogParams({ page: catalogParams.page + 1 })}
-                disabled={catalogParams.page >= pagination.totalPages || isCatalogLoading}
-                className="inline-flex items-center gap-1 rounded-full border border-peach-200 dark:border-warmbrown-800 bg-white dark:bg-[#1F1610] px-4 py-2 text-xs font-bold text-warmbrown-700 dark:text-peach-200 hover:bg-peach-50 dark:hover:bg-warmbrown-900 transition-colors disabled:opacity-50"
-              >
-                Next <ChevronRight size={15} />
-              </button>
+            <div className="flex items-center justify-center pt-6 pb-2">
+              <Pagination
+                count={pagination.totalPages}
+                page={catalogParams.page}
+                onPageChange={(nextPage) => updateCatalogParams({ page: nextPage })}
+                label="Product catalog pagination"
+              />
             </div>
           )}
         </div>
