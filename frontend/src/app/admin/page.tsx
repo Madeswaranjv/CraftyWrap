@@ -206,6 +206,23 @@ export default function AdminDashboardPage() {
   const [newTypeSlug, setNewTypeSlug] = useState('');
   const [newTypeIcon, setNewTypeIcon] = useState('🧶');
 
+  // Theme Edit & Delete States
+  const [editingTheme, setEditingTheme] = useState<CatalogTheme | null>(null);
+  const [editThemeName, setEditThemeName] = useState('');
+  const [editThemeIcon, setEditThemeIcon] = useState('');
+  const [editThemeDesc, setEditThemeDesc] = useState('');
+  const [deletingTheme, setDeletingTheme] = useState<CatalogTheme | null>(null);
+  const [isSavingTheme, setIsSavingTheme] = useState(false);
+  const [isDeletingTheme, setIsDeletingTheme] = useState(false);
+
+  // Product Type Edit & Delete States
+  const [editingType, setEditingType] = useState<CatalogProductType | null>(null);
+  const [editTypeName, setEditTypeName] = useState('');
+  const [editTypeIcon, setEditTypeIcon] = useState('');
+  const [deletingType, setDeletingType] = useState<CatalogProductType | null>(null);
+  const [isSavingType, setIsSavingType] = useState(false);
+  const [isDeletingType, setIsDeletingType] = useState(false);
+
   const [newPromoCode, setNewPromoCode] = useState('');
   const [newPromoValue, setNewPromoValue] = useState(10);
 
@@ -221,8 +238,14 @@ export default function AdminDashboardPage() {
     setLoading(true);
     try {
       if (activeTab === 'products') {
-        const res = await apiRequest<{ products: CatalogProduct[] }>('/products?limit=1000&includeInactive=true');
+        const [res, themesRes, typesRes] = await Promise.all([
+          apiRequest<{ products: CatalogProduct[] }>('/products?limit=1000&includeInactive=true'),
+          apiRequest<CatalogTheme[]>('/design-themes').catch(() => null),
+          apiRequest<CatalogProductType[]>('/product-types').catch(() => null),
+        ]);
         setProducts(res.products);
+        if (themesRes) setThemes(themesRes);
+        if (typesRes) setTypes(typesRes);
       } else if (activeTab === 'themes') {
         const res = await apiRequest<CatalogTheme[]>('/design-themes');
         setThemes(res);
@@ -530,7 +553,7 @@ export default function AdminDashboardPage() {
   const handleCreateTheme = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiRequest('/design-themes', {
+      const created = await apiRequest<CatalogTheme>('/design-themes', {
         method: 'POST',
         token,
         body: JSON.stringify({
@@ -544,16 +567,89 @@ export default function AdminDashboardPage() {
       showNotification('success', 'Design Theme created!');
       setNewThemeName('');
       setNewThemeSlug('');
+      setNewThemeDesc('');
+      if (created) {
+        setThemes((prev) => [...prev, created]);
+      }
       void loadData();
     } catch (err) {
       showNotification('error', err instanceof Error ? err.message : 'Failed to create theme.');
     }
   };
 
+  const handleOpenEditThemeModal = (t: CatalogTheme) => {
+    setEditingTheme(t);
+    setEditThemeName(t.name);
+    setEditThemeIcon(t.icon || '🐱');
+    setEditThemeDesc(t.description || '');
+  };
+
+  const handleSaveEditTheme = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTheme) return;
+    const themeId = editingTheme._id || editingTheme.id;
+    setIsSavingTheme(true);
+    try {
+      const updated = await apiRequest<CatalogTheme>(`/design-themes/${themeId}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({
+          name: editThemeName.trim(),
+          icon: editThemeIcon.trim() || '🧶',
+          description: editThemeDesc.trim(),
+        }),
+      });
+      showNotification('success', `Design theme "${editThemeName}" updated!`);
+      // Dynamically update themes in UI
+      setThemes((prev) =>
+        prev.map((item) =>
+          ((item._id && item._id === themeId) || (item.id && item.id === themeId) || item.name === editingTheme.name)
+            ? { ...item, ...updated, name: editThemeName.trim(), icon: editThemeIcon.trim(), description: editThemeDesc.trim() }
+            : item
+        )
+      );
+      // Dynamically update any currently loaded products if the theme name changed
+      if (editThemeName.trim() !== editingTheme.name) {
+        setProducts((prev) =>
+          prev.map((p) => (p.designTheme === editingTheme.name ? { ...p, designTheme: editThemeName.trim() } : p))
+        );
+      }
+      setEditingTheme(null);
+      void loadData();
+    } catch (err) {
+      showNotification('error', err instanceof Error ? err.message : 'Failed to update design theme.');
+    } finally {
+      setIsSavingTheme(false);
+    }
+  };
+
+  const handleConfirmDeleteTheme = async () => {
+    if (!deletingTheme) return;
+    const themeId = deletingTheme._id || deletingTheme.id;
+    setIsDeletingTheme(true);
+    try {
+      await apiRequest(`/design-themes/${themeId}`, {
+        method: 'DELETE',
+        token,
+      });
+      showNotification('success', `Design theme "${deletingTheme.name}" deleted.`);
+      // Dynamically remove from themes in UI
+      setThemes((prev) =>
+        prev.filter((item) => (item._id && item._id !== themeId) && (item.id && item.id !== themeId) && item.name !== deletingTheme.name)
+      );
+      setDeletingTheme(null);
+      void loadData();
+    } catch (err) {
+      showNotification('error', err instanceof Error ? err.message : 'Failed to delete design theme.');
+    } finally {
+      setIsDeletingTheme(false);
+    }
+  };
+
   const handleCreateType = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiRequest('/product-types', {
+      const created = await apiRequest<CatalogProductType>('/product-types', {
         method: 'POST',
         token,
         body: JSON.stringify({
@@ -566,9 +662,79 @@ export default function AdminDashboardPage() {
       showNotification('success', 'Product Type created!');
       setNewTypeName('');
       setNewTypeSlug('');
+      if (created) {
+        setTypes((prev) => [...prev, created]);
+      }
       void loadData();
     } catch (err) {
       showNotification('error', err instanceof Error ? err.message : 'Failed to create product type.');
+    }
+  };
+
+  const handleOpenEditTypeModal = (t: CatalogProductType) => {
+    setEditingType(t);
+    setEditTypeName(t.name);
+    setEditTypeIcon(t.icon || '🧶');
+  };
+
+  const handleSaveEditType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingType) return;
+    const typeId = (editingType as any)._id || (editingType as any).id;
+    setIsSavingType(true);
+    try {
+      const updated = await apiRequest<CatalogProductType>(`/product-types/${typeId}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({
+          name: editTypeName.trim(),
+          icon: editTypeIcon.trim() || '🧶',
+        }),
+      });
+      showNotification('success', `Product type "${editTypeName}" updated!`);
+      // Dynamically update types in UI
+      setTypes((prev) =>
+        prev.map((item) =>
+          (((item as any)._id && (item as any)._id === typeId) || ((item as any).id && (item as any).id === typeId) || item.name === editingType.name)
+            ? { ...item, ...updated, name: editTypeName.trim(), icon: editTypeIcon.trim() }
+            : item
+        )
+      );
+      // Dynamically update any currently loaded products if the type name changed
+      if (editTypeName.trim() !== editingType.name) {
+        setProducts((prev) =>
+          prev.map((p) => (p.productType === editingType.name ? { ...p, productType: editTypeName.trim() } : p))
+        );
+      }
+      setEditingType(null);
+      void loadData();
+    } catch (err) {
+      showNotification('error', err instanceof Error ? err.message : 'Failed to update product type.');
+    } finally {
+      setIsSavingType(false);
+    }
+  };
+
+  const handleConfirmDeleteType = async () => {
+    if (!deletingType) return;
+    const typeId = (deletingType as any)._id || (deletingType as any).id;
+    setIsDeletingType(true);
+    try {
+      await apiRequest(`/product-types/${typeId}`, {
+        method: 'DELETE',
+        token,
+      });
+      showNotification('success', `Product type "${deletingType.name}" deleted.`);
+      // Dynamically remove from types in UI
+      setTypes((prev) =>
+        prev.filter((item) => ((item as any)._id && (item as any)._id !== typeId) && ((item as any).id && (item as any).id !== typeId) && item.name !== deletingType.name)
+      );
+      setDeletingType(null);
+      void loadData();
+    } catch (err) {
+      showNotification('error', err instanceof Error ? err.message : 'Failed to delete product type.');
+    } finally {
+      setIsDeletingType(false);
     }
   };
 
@@ -1112,7 +1278,7 @@ export default function AdminDashboardPage() {
                       className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                     />
                     <datalist id="product-types-list">
-                      {COMMON_PRODUCT_TYPES.map((pt) => (
+                      {Array.from(new Set([...COMMON_PRODUCT_TYPES, ...types.map((t) => t.name).filter(Boolean)])).map((pt) => (
                         <option key={pt} value={pt} />
                       ))}
                     </datalist>
@@ -1129,7 +1295,7 @@ export default function AdminDashboardPage() {
                       className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                     />
                     <datalist id="design-themes-list">
-                      {COMMON_DESIGN_THEMES.map((dt) => (
+                      {Array.from(new Set([...COMMON_DESIGN_THEMES, ...themes.map((dt) => dt.name).filter(Boolean)])).map((dt) => (
                         <option key={dt} value={dt} />
                       ))}
                     </datalist>
@@ -1481,6 +1647,216 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* EDIT DESIGN THEME MODAL */}
+      {editingTheme && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1A120B] rounded-3xl border border-peach-200 dark:border-warmbrown-800 max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-peach-100 dark:border-warmbrown-900">
+              <div className="flex items-center gap-2 font-bold text-warmbrown-900 dark:text-peach-100 text-base">
+                <Edit3 size={18} className="text-warmbrown-600 dark:text-peach-300" />
+                <h3>Edit Design Theme</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTheme(null)}
+                className="text-warmbrown-500 hover:text-warmbrown-800 dark:text-peach-300 dark:hover:text-white p-1 rounded-full hover:bg-peach-100 dark:hover:bg-warmbrown-900 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditTheme} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Theme Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editThemeName}
+                  onChange={(e) => setEditThemeName(e.target.value)}
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
+                  placeholder="Theme Name (e.g., Anime)"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Icon / Emoji *</label>
+                <input
+                  type="text"
+                  required
+                  value={editThemeIcon}
+                  onChange={(e) => setEditThemeIcon(e.target.value)}
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
+                  placeholder="Emoji (e.g., 🥷 or 🧶)"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={editThemeDesc}
+                  onChange={(e) => setEditThemeDesc(e.target.value)}
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 resize-none"
+                  placeholder="Description of this design theme..."
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-peach-100 dark:border-warmbrown-900">
+                <button
+                  type="button"
+                  disabled={isSavingTheme}
+                  onClick={() => setEditingTheme(null)}
+                  className="bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200 px-4 py-2 rounded-full font-bold text-xs hover:bg-peach-200 dark:hover:bg-warmbrown-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingTheme}
+                  className="bg-warmbrown-800 hover:bg-warmbrown-900 dark:bg-warmbrown-700 dark:hover:bg-warmbrown-600 text-white px-5 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                >
+                  {isSavingTheme ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  <span>{isSavingTheme ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE DESIGN THEME CONFIRMATION MODAL */}
+      {deletingTheme && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1A120B] rounded-3xl border border-rose-200 dark:border-rose-900 max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400 font-extrabold">
+              <AlertTriangle size={24} />
+              <h3 className="text-lg">Delete Design Theme?</h3>
+            </div>
+            <p className="text-xs text-warmbrown-700 dark:text-peach-200 leading-relaxed">
+              Are you sure you want to delete <span className="font-extrabold text-warmbrown-900 dark:text-white">“{deletingTheme.name}”</span>? This operation will remove the theme from your catalog.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingTheme}
+                onClick={() => setDeletingTheme(null)}
+                className="bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200 px-4 py-2 rounded-full font-bold text-xs hover:bg-peach-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingTheme}
+                onClick={handleConfirmDeleteTheme}
+                className="bg-rose-600 hover:bg-rose-700 text-white px-5 py-2 rounded-full font-bold text-xs shadow-md flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeletingTheme ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                <span>{isDeletingTheme ? 'Deleting...' : 'Delete Theme'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PRODUCT TYPE MODAL */}
+      {editingType && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1A120B] rounded-3xl border border-peach-200 dark:border-warmbrown-800 max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-peach-100 dark:border-warmbrown-900">
+              <div className="flex items-center gap-2 font-bold text-warmbrown-900 dark:text-peach-100 text-base">
+                <Edit3 size={18} className="text-warmbrown-600 dark:text-peach-300" />
+                <h3>Edit Product Type</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingType(null)}
+                className="text-warmbrown-500 hover:text-warmbrown-800 dark:text-peach-300 dark:hover:text-white p-1 rounded-full hover:bg-peach-100 dark:hover:bg-warmbrown-900 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditType} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Product Type Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editTypeName}
+                  onChange={(e) => setEditTypeName(e.target.value)}
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
+                  placeholder="Product Type Name (e.g., Keychains)"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Icon / Emoji</label>
+                <input
+                  type="text"
+                  value={editTypeIcon}
+                  onChange={(e) => setEditTypeIcon(e.target.value)}
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
+                  placeholder="Emoji (e.g., 🧶)"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-peach-100 dark:border-warmbrown-900">
+                <button
+                  type="button"
+                  disabled={isSavingType}
+                  onClick={() => setEditingType(null)}
+                  className="bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200 px-4 py-2 rounded-full font-bold text-xs hover:bg-peach-200 dark:hover:bg-warmbrown-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingType}
+                  className="bg-warmbrown-800 hover:bg-warmbrown-900 dark:bg-warmbrown-700 dark:hover:bg-warmbrown-600 text-white px-5 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                >
+                  {isSavingType ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  <span>{isSavingType ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE PRODUCT TYPE CONFIRMATION MODAL */}
+      {deletingType && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1A120B] rounded-3xl border border-rose-200 dark:border-rose-900 max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400 font-extrabold">
+              <AlertTriangle size={24} />
+              <h3 className="text-lg">Delete Product Type?</h3>
+            </div>
+            <p className="text-xs text-warmbrown-700 dark:text-peach-200 leading-relaxed">
+              Are you sure you want to delete <span className="font-extrabold text-warmbrown-900 dark:text-white">“{deletingType.name}”</span>? This operation will remove the product type from your catalog.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingType}
+                onClick={() => setDeletingType(null)}
+                className="bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200 px-4 py-2 rounded-full font-bold text-xs hover:bg-peach-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingType}
+                onClick={handleConfirmDeleteType}
+                className="bg-rose-600 hover:bg-rose-700 text-white px-5 py-2 rounded-full font-bold text-xs shadow-md flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeletingType ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                <span>{isDeletingType ? 'Deleting...' : 'Delete Product Type'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 2: DESIGN THEMES */}
       {activeTab === 'themes' && (
         <div className="space-y-6">
@@ -1498,11 +1874,39 @@ export default function AdminDashboardPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {themes.map((t) => (
-              <div key={t._id || t.id} className="bg-white dark:bg-[#1F1610] p-4 rounded-2xl border border-peach-200 dark:border-warmbrown-900/80 flex items-center gap-3">
-                <span className="text-3xl">{t.icon}</span>
-                <div>
-                  <h4 className="font-bold text-warmbrown-800 dark:text-peach-100 text-sm">{t.name}</h4>
-                  <p className="text-xs text-warmbrown-500 dark:text-peach-300/60">{t.description}</p>
+              <div key={t._id || t.id} className="bg-white dark:bg-[#1F1610] p-4 rounded-2xl border border-peach-200 dark:border-warmbrown-900/80 flex items-center justify-between gap-3 group hover:border-warmbrown-300 dark:hover:border-warmbrown-700 transition-all shadow-xs">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="text-3xl shrink-0">{t.icon || '🧶'}</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-warmbrown-800 dark:text-peach-100 text-sm truncate">{t.name}</h4>
+                      {typeof t.itemCount === 'number' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-peach-100 dark:bg-warmbrown-800 text-warmbrown-600 dark:text-peach-300 font-medium">
+                          {t.itemCount} {t.itemCount === 1 ? 'item' : 'items'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-warmbrown-500 dark:text-peach-300/60 truncate">{t.description}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditThemeModal(t)}
+                    className="bg-peach-100 hover:bg-peach-200 dark:bg-warmbrown-800 dark:hover:bg-warmbrown-700 text-warmbrown-800 dark:text-peach-100 px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 transition-all text-xs"
+                    title={`Edit theme "${t.name}"`}
+                  >
+                    <Edit3 size={13} /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingTheme(t)}
+                    className="bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/80 text-rose-600 dark:text-rose-300 p-1.5 rounded-xl transition-all"
+                    title={`Delete theme "${t.name}"`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -1526,9 +1930,30 @@ export default function AdminDashboardPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {types.map((t) => (
-              <div key={t._id || t.name} className="bg-white dark:bg-[#1F1610] p-4 rounded-2xl border border-peach-200 dark:border-warmbrown-900/80 flex items-center gap-3">
-                <span className="text-2xl">{t.icon ?? '🧶'}</span>
-                <h4 className="font-bold text-warmbrown-800 dark:text-peach-100 text-sm">{t.name}</h4>
+              <div key={t._id || (t as any).id || t.name} className="bg-white dark:bg-[#1F1610] p-4 rounded-2xl border border-peach-200 dark:border-warmbrown-900/80 flex items-center justify-between gap-3 group hover:border-warmbrown-300 dark:hover:border-warmbrown-700 transition-all shadow-xs">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="text-2xl shrink-0">{t.icon ?? '🧶'}</span>
+                  <h4 className="font-bold text-warmbrown-800 dark:text-peach-100 text-sm truncate">{t.name}</h4>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditTypeModal(t)}
+                    className="bg-peach-100 hover:bg-peach-200 dark:bg-warmbrown-800 dark:hover:bg-warmbrown-700 text-warmbrown-800 dark:text-peach-100 px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 transition-all text-xs"
+                    title={`Edit product type "${t.name}"`}
+                  >
+                    <Edit3 size={13} /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingType(t)}
+                    className="bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/80 text-rose-600 dark:text-rose-300 p-1.5 rounded-xl transition-all"
+                    title={`Delete product type "${t.name}"`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
