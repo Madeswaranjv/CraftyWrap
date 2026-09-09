@@ -1,4 +1,5 @@
 import type { RequestHandler } from 'express';
+import { isValidObjectId } from 'mongoose';
 import { z } from 'zod';
 import { DesignTheme } from '../models/DesignTheme';
 import { Product } from '../models/Product';
@@ -35,13 +36,37 @@ export const createDesignTheme: RequestHandler = asyncHandler(async (req, res) =
   }
   sendSuccess(res, 201, 'Design theme created.', await DesignTheme.create(req.body));
 });
+
 export const updateDesignTheme: RequestHandler = asyncHandler(async (req, res) => {
-  const item = await DesignTheme.findByIdAndUpdate(req.params.designThemeId, { $set: req.body }, { new: true, runValidators: true });
+  const themeParam = req.params.designThemeId;
+  const filter = isValidObjectId(themeParam)
+    ? { _id: themeParam }
+    : { $or: [{ slug: themeParam }, { name: themeParam }] };
+
+  const current = await DesignTheme.findOne(filter);
+  if (!current) throw new HttpError(404, 'Design theme not found.');
+
+  if (req.body.name && !req.body.slug) {
+    req.body.slug = req.body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  }
+
+  const item = await DesignTheme.findByIdAndUpdate(current._id, { $set: req.body }, { new: true, runValidators: true });
   if (!item) throw new HttpError(404, 'Design theme not found.');
+
+  if (req.body.name && req.body.name !== current.name) {
+    await Product.updateMany({ designTheme: current.name }, { $set: { designTheme: item.name } });
+  }
+
   sendSuccess(res, 200, 'Design theme updated.', item);
 });
+
 export const deleteDesignTheme: RequestHandler = asyncHandler(async (req, res) => {
-  const item = await DesignTheme.findByIdAndDelete(req.params.designThemeId);
+  const themeParam = req.params.designThemeId;
+  const filter = isValidObjectId(themeParam)
+    ? { _id: themeParam }
+    : { $or: [{ slug: themeParam }, { name: themeParam }] };
+
+  const item = await DesignTheme.findOneAndDelete(filter);
   if (!item) throw new HttpError(404, 'Design theme not found.');
   sendSuccess(res, 200, 'Design theme deleted.', { id: item._id.toString() });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useCart } from '@/context/CartContext';
 import { apiRequest, getStoredAccessToken } from '@/lib/api';
 import { CatalogProduct, CatalogProductType, CatalogTheme } from '@/lib/catalog';
@@ -31,6 +31,7 @@ import {
   Upload,
   ArrowLeft,
   ArrowRight,
+  ChevronDown,
 } from 'lucide-react';
 
 interface PromoCodeItem {
@@ -186,8 +187,59 @@ export default function AdminDashboardPage() {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm);
+  const [isCustomType, setIsCustomType] = useState(false);
+  const [isCustomTheme, setIsCustomTheme] = useState(false);
+  const [isCustomYarn, setIsCustomYarn] = useState(false);
   const [newHighlightText, setNewHighlightText] = useState('');
   const [newImageUrlText, setNewImageUrlText] = useState('');
+
+  // Deduplicated Base Options for Types, Themes, and Yarn
+  const baseProductTypes = useMemo(() => {
+    const set = new Set<string>();
+    types.forEach((t) => t.name && set.add(t.name.trim()));
+    products.forEach((p) => p.productType && set.add(p.productType.trim()));
+    COMMON_PRODUCT_TYPES.forEach((t) => t && set.add(t.trim()));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [types, products]);
+
+  const availableProductTypes = useMemo(() => {
+    const set = new Set<string>(baseProductTypes);
+    if (!isCustomType && productForm.productType && productForm.productType.trim()) {
+      set.add(productForm.productType.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [baseProductTypes, isCustomType, productForm.productType]);
+
+  const baseDesignThemes = useMemo(() => {
+    const set = new Set<string>();
+    themes.forEach((t) => t.name && set.add(t.name.trim()));
+    products.forEach((p) => p.designTheme && set.add(p.designTheme.trim()));
+    COMMON_DESIGN_THEMES.forEach((t) => t && set.add(t.trim()));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [themes, products]);
+
+  const availableDesignThemes = useMemo(() => {
+    const set = new Set<string>(baseDesignThemes);
+    if (!isCustomTheme && productForm.designTheme && productForm.designTheme.trim()) {
+      set.add(productForm.designTheme.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [baseDesignThemes, isCustomTheme, productForm.designTheme]);
+
+  const baseYarnTypes = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => p.yarnType && set.add(p.yarnType.trim()));
+    COMMON_YARN_TYPES.forEach((yt) => yt && set.add(yt.trim()));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
+  const availableYarnTypes = useMemo(() => {
+    const set = new Set<string>(baseYarnTypes);
+    if (!isCustomYarn && productForm.yarnType && productForm.yarnType.trim()) {
+      set.add(productForm.yarnType.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [baseYarnTypes, isCustomYarn, productForm.yarnType]);
 
   // Permanent Delete Confirmation Modal
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
@@ -280,6 +332,9 @@ export default function AdminDashboardPage() {
   const handleOpenCreateModal = () => {
     setModalMode('create');
     setProductForm(emptyProductForm);
+    setIsCustomType(false);
+    setIsCustomTheme(false);
+    setIsCustomYarn(false);
     setIsProductModalOpen(true);
   };
 
@@ -308,6 +363,9 @@ export default function AdminDashboardPage() {
       images: product.images ?? [],
       isActive: product.isActive ?? true,
     });
+    setIsCustomType(false);
+    setIsCustomTheme(false);
+    setIsCustomYarn(false);
     setIsProductModalOpen(true);
   };
 
@@ -960,6 +1018,46 @@ export default function AdminDashboardPage() {
                 </button>
               ))}
             </div>
+
+            {/* Theme Dropdown Filter */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-warmbrown-600 dark:text-peach-300/80">Theme:</span>
+              <div className="relative">
+                <select
+                  value={themeFilter}
+                  onChange={(e) => setThemeFilter(e.target.value)}
+                  className="bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 rounded-xl px-3 py-1.5 pr-7 text-xs text-warmbrown-800 dark:text-peach-100 outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 appearance-none cursor-pointer font-medium"
+                >
+                  <option value="all">All Themes</option>
+                  {baseDesignThemes.map((dt) => (
+                    <option key={dt} value={dt}>
+                      {dt}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-warmbrown-500 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Product Type Dropdown Filter */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-warmbrown-600 dark:text-peach-300/80">Type:</span>
+              <div className="relative">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 rounded-xl px-3 py-1.5 pr-7 text-xs text-warmbrown-800 dark:text-peach-100 outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 appearance-none cursor-pointer font-medium"
+                >
+                  <option value="all">All Types</option>
+                  {baseProductTypes.map((pt) => (
+                    <option key={pt} value={pt}>
+                      {pt}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-warmbrown-500 pointer-events-none" />
+              </div>
+            </div>
           </div>
 
           {/* Products Summary & Table */}
@@ -1267,55 +1365,184 @@ export default function AdminDashboardPage() {
                   <Tag size={14} /> Categorization & Specifications
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* PRODUCT TYPE */}
                   <div>
-                    <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Product Type *</label>
-                    <input
-                      type="text"
-                      list="product-types-list"
-                      required
-                      value={productForm.productType}
-                      onChange={(e) => setProductForm({ ...productForm, productType: e.target.value })}
-                      className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
-                    />
-                    <datalist id="product-types-list">
-                      {Array.from(new Set([...COMMON_PRODUCT_TYPES, ...types.map((t) => t.name).filter(Boolean)])).map((pt) => (
-                        <option key={pt} value={pt} />
-                      ))}
-                    </datalist>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-bold text-warmbrown-700 dark:text-peach-200 text-xs sm:text-sm">
+                        Product Type *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !isCustomType;
+                          setIsCustomType(next);
+                          if (!next && !productForm.productType && availableProductTypes.length > 0) {
+                            setProductForm((prev) => ({ ...prev, productType: availableProductTypes[0] }));
+                          }
+                        }}
+                        className="text-[11px] font-semibold text-warmbrown-600 dark:text-peach-300 hover:text-warmbrown-900 dark:hover:text-white underline cursor-pointer"
+                      >
+                        {isCustomType ? '← Choose from dropdown' : '+ Enter custom'}
+                      </button>
+                    </div>
+
+                    {isCustomType ? (
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Dolls, Keychains..."
+                        value={productForm.productType}
+                        onChange={(e) => setProductForm({ ...productForm, productType: e.target.value })}
+                        className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 font-medium text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <div className="relative">
+                        <select
+                          required
+                          value={productForm.productType}
+                          onChange={(e) => {
+                            if (e.target.value === '__custom__') {
+                              setIsCustomType(true);
+                              setProductForm({ ...productForm, productType: '' });
+                            } else {
+                              setProductForm({ ...productForm, productType: e.target.value });
+                            }
+                          }}
+                          className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 pr-8 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 font-medium text-xs sm:text-sm appearance-none cursor-pointer"
+                        >
+                          <option value="" disabled>-- Select Existing Product Type --</option>
+                          {availableProductTypes.map((pt) => (
+                            <option key={pt} value={pt} className="bg-white dark:bg-warmbrown-900 text-warmbrown-900 dark:text-peach-100">
+                              {pt}
+                            </option>
+                          ))}
+                          <option value="__custom__" className="bg-peach-100 dark:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-200 font-bold">
+                            ✨ + Enter custom product type...
+                          </option>
+                        </select>
+                        <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-warmbrown-500 dark:text-peach-300 pointer-events-none" />
+                      </div>
+                    )}
                   </div>
 
+                  {/* DESIGN THEME */}
                   <div>
-                    <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Design Theme *</label>
-                    <input
-                      type="text"
-                      list="design-themes-list"
-                      required
-                      value={productForm.designTheme}
-                      onChange={(e) => setProductForm({ ...productForm, designTheme: e.target.value })}
-                      className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
-                    />
-                    <datalist id="design-themes-list">
-                      {Array.from(new Set([...COMMON_DESIGN_THEMES, ...themes.map((dt) => dt.name).filter(Boolean)])).map((dt) => (
-                        <option key={dt} value={dt} />
-                      ))}
-                    </datalist>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-bold text-warmbrown-700 dark:text-peach-200 text-xs sm:text-sm">
+                        Design Theme *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !isCustomTheme;
+                          setIsCustomTheme(next);
+                          if (!next && !productForm.designTheme && availableDesignThemes.length > 0) {
+                            setProductForm((prev) => ({ ...prev, designTheme: availableDesignThemes[0] }));
+                          }
+                        }}
+                        className="text-[11px] font-semibold text-warmbrown-600 dark:text-peach-300 hover:text-warmbrown-900 dark:hover:text-white underline cursor-pointer"
+                      >
+                        {isCustomTheme ? '← Choose from dropdown' : '+ Enter custom'}
+                      </button>
+                    </div>
+
+                    {isCustomTheme ? (
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Domestic Animals, Flowers..."
+                        value={productForm.designTheme}
+                        onChange={(e) => setProductForm({ ...productForm, designTheme: e.target.value })}
+                        className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 font-medium text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <div className="relative">
+                        <select
+                          required
+                          value={productForm.designTheme}
+                          onChange={(e) => {
+                            if (e.target.value === '__custom__') {
+                              setIsCustomTheme(true);
+                              setProductForm({ ...productForm, designTheme: '' });
+                            } else {
+                              setProductForm({ ...productForm, designTheme: e.target.value });
+                            }
+                          }}
+                          className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 pr-8 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 font-medium text-xs sm:text-sm appearance-none cursor-pointer"
+                        >
+                          <option value="" disabled>-- Select Existing Design Theme --</option>
+                          {availableDesignThemes.map((dt) => (
+                            <option key={dt} value={dt} className="bg-white dark:bg-warmbrown-900 text-warmbrown-900 dark:text-peach-100">
+                              {dt}
+                            </option>
+                          ))}
+                          <option value="__custom__" className="bg-peach-100 dark:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-200 font-bold">
+                            ✨ + Enter custom design theme...
+                          </option>
+                        </select>
+                        <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-warmbrown-500 dark:text-peach-300 pointer-events-none" />
+                      </div>
+                    )}
                   </div>
 
+                  {/* YARN TYPE */}
                   <div>
-                    <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">Yarn Type *</label>
-                    <input
-                      type="text"
-                      list="yarn-types-list"
-                      required
-                      value={productForm.yarnType}
-                      onChange={(e) => setProductForm({ ...productForm, yarnType: e.target.value })}
-                      className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
-                    />
-                    <datalist id="yarn-types-list">
-                      {COMMON_YARN_TYPES.map((yt) => (
-                        <option key={yt} value={yt} />
-                      ))}
-                    </datalist>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-bold text-warmbrown-700 dark:text-peach-200 text-xs sm:text-sm">
+                        Yarn Type *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !isCustomYarn;
+                          setIsCustomYarn(next);
+                          if (!next && !productForm.yarnType && availableYarnTypes.length > 0) {
+                            setProductForm((prev) => ({ ...prev, yarnType: availableYarnTypes[0] }));
+                          }
+                        }}
+                        className="text-[11px] font-semibold text-warmbrown-600 dark:text-peach-300 hover:text-warmbrown-900 dark:hover:text-white underline cursor-pointer"
+                      >
+                        {isCustomYarn ? '← Choose from dropdown' : '+ Enter custom'}
+                      </button>
+                    </div>
+
+                    {isCustomYarn ? (
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Velvet Chenille, Milk Cotton..."
+                        value={productForm.yarnType}
+                        onChange={(e) => setProductForm({ ...productForm, yarnType: e.target.value })}
+                        className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 font-medium text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <div className="relative">
+                        <select
+                          required
+                          value={productForm.yarnType}
+                          onChange={(e) => {
+                            if (e.target.value === '__custom__') {
+                              setIsCustomYarn(true);
+                              setProductForm({ ...productForm, yarnType: '' });
+                            } else {
+                              setProductForm({ ...productForm, yarnType: e.target.value });
+                            }
+                          }}
+                          className="w-full bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 pr-8 rounded-xl outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 font-medium text-xs sm:text-sm appearance-none cursor-pointer"
+                        >
+                          <option value="" disabled>-- Select Existing Yarn Type --</option>
+                          {availableYarnTypes.map((yt) => (
+                            <option key={yt} value={yt} className="bg-white dark:bg-warmbrown-900 text-warmbrown-900 dark:text-peach-100">
+                              {yt}
+                            </option>
+                          ))}
+                          <option value="__custom__" className="bg-peach-100 dark:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-200 font-bold">
+                            ✨ + Enter custom yarn type...
+                          </option>
+                        </select>
+                        <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-warmbrown-500 dark:text-peach-300 pointer-events-none" />
+                      </div>
+                    )}
                   </div>
 
                   <div>
