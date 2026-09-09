@@ -161,25 +161,27 @@ export const Header: React.FC = () => {
                 <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-warmbrown-400 dark:text-peach-300/60 border-b border-peach-100 dark:border-warmbrown-800 mb-1">
                   Shop By Category
                 </div>
-                {themes.map((theme) => (
-                  <Link
-                    key={theme._id || theme.id}
-                    href={`/collections?category=${encodeURIComponent(theme.name)}`}
-                    className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium hover:bg-peach-50 dark:hover:bg-warmbrown-900/80 text-warmbrown-800 dark:text-peach-100 hover:text-warmbrown-900 transition-colors"
-                  >
-                    <span className="flex items-center gap-2">
-                      {theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
-                        <img src={theme.icon} alt={theme.name} className="h-4 w-auto max-w-[32px] object-contain rounded inline-block" />
-                      ) : (
-                        <span>{theme.icon}</span>
-                      )}
-                      <span>{theme.name}</span>
-                    </span>
-                    <span className="text-xs text-warmbrown-500 dark:text-peach-300/70 font-semibold">
-                      {theme.itemCount} {theme.itemCount === 1 ? 'item' : 'items'}
-                    </span>
-                  </Link>
-                ))}
+                <div className="max-h-[195px] overflow-y-auto pr-1 space-y-0.5 overscroll-contain">
+                  {themes.map((theme) => (
+                    <Link
+                      key={theme._id || theme.id}
+                      href={`/collections?category=${encodeURIComponent(theme.name)}`}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium hover:bg-peach-50 dark:hover:bg-warmbrown-900/80 text-warmbrown-800 dark:text-peach-100 hover:text-warmbrown-900 transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        {theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
+                          <img src={theme.icon} alt={theme.name} className="h-4 w-auto max-w-[32px] object-contain rounded inline-block" />
+                        ) : (
+                          <span>{theme.icon}</span>
+                        )}
+                        <span>{theme.name}</span>
+                      </span>
+                      <span className="text-xs text-warmbrown-500 dark:text-peach-300/70 font-semibold">
+                        {theme.itemCount} {theme.itemCount === 1 ? 'item' : 'items'}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
                 <div className="border-t border-peach-100 dark:border-warmbrown-800 mt-2 pt-2 px-2">
                   <Link
                     href="/collections"
