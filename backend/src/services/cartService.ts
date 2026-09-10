@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import mongoose from 'mongoose';
 import { Cart, CartDocument } from '../models/Cart';
 import { Product } from '../models/Product';
 import { HttpError } from '../utils/HttpError';
@@ -20,8 +21,34 @@ export function getCartOwner(req: Request): CartOwner {
   return { cartToken };
 }
 
+export function matchesProduct(productField: any, target: string): boolean {
+  if (!productField || !target) return false;
+  const targetStr = String(target).trim();
+
+  // If populated product document
+  if (typeof productField === 'object') {
+    if (productField._id && productField._id.toString() === targetStr) return true;
+    if (productField.slug && productField.slug.toLowerCase() === targetStr.toLowerCase()) return true;
+    if (productField.id && productField.id.toString() === targetStr) return true;
+  }
+
+  // If unpopulated ObjectId or string
+  if (typeof productField === 'string' && productField === targetStr) return true;
+  if (productField?.toString && productField.toString() === targetStr) return true;
+
+  return false;
+}
+
 export async function findCart(owner: CartOwner): Promise<CartDocument | null> {
-  return Cart.findOne(owner).populate('items.product');
+  const cart = await Cart.findOne(owner).populate('items.product');
+  if (cart) {
+    const initialCount = cart.items.length;
+    cart.items = cart.items.filter((item: { product?: unknown }) => item.product != null);
+    if (cart.items.length !== initialCount) {
+      await cart.save();
+    }
+  }
+  return cart;
 }
 
 export async function getOrCreateCart(owner: CartOwner): Promise<CartDocument> {
@@ -39,7 +66,15 @@ export async function addItemToCart(
   quantity: number,
   customNote?: string,
 ): Promise<CartDocument> {
-  const product = await Product.findOne({ _id: productId, isActive: true });
+  const target = String(productId).trim();
+  const isMongoId = mongoose.Types.ObjectId.isValid(target);
+  const product = await Product.findOne({
+    $or: [
+      ...(isMongoId ? [{ _id: target }] : []),
+      { slug: target },
+    ],
+    isActive: true,
+  });
   if (!product) {
     throw new HttpError(404, 'Product not found or unavailable.');
   }
@@ -48,7 +83,9 @@ export async function addItemToCart(
   }
 
   const cart = await getOrCreateCart(owner);
-  const existingItem = cart.items.find((item) => item.product._id.toString() === productId);
+  const existingItem = cart.items.find((item) =>
+    matchesProduct(item.product, product._id.toString()) || matchesProduct(item.product, product.slug)
+  );
 
   if (existingItem) {
     const nextQuantity = existingItem.quantity + quantity;
@@ -74,20 +111,32 @@ export async function updateCartItem(
   const cart = await findCart(owner);
   if (!cart) throw new HttpError(404, 'Cart not found.');
 
-  const item = cart.items.find((cartItem) => cartItem.product._id.toString() === productId);
+  const target = String(productId).trim();
+
+  // If removing item (quantity <= 0)
+  if (quantity <= 0) {
+    cart.items = cart.items.filter((cartItem) => !matchesProduct(cartItem.product, target));
+    await cart.save();
+    return cart.populate('items.product');
+  }
+
+  const item = cart.items.find((cartItem) => matchesProduct(cartItem.product, target));
   if (!item) throw new HttpError(404, 'Cart item not found.');
 
-  if (quantity <= 0) {
-    cart.items = cart.items.filter((cartItem) => cartItem.product._id.toString() !== productId);
-  } else {
-    const product = await Product.findOne({ _id: productId, isActive: true });
-    if (!product) throw new HttpError(404, 'Product not found or unavailable.');
-    if (quantity > product.stockCount) {
-      throw new HttpError(409, 'Requested quantity exceeds the available stock.');
-    }
-    item.quantity = quantity;
-    if (customNote !== undefined) item.customNote = customNote;
+  const isMongoId = mongoose.Types.ObjectId.isValid(target);
+  const product = await Product.findOne({
+    $or: [
+      ...(isMongoId ? [{ _id: target }] : []),
+      { slug: target },
+    ],
+    isActive: true,
+  });
+  if (!product) throw new HttpError(404, 'Product not found or unavailable.');
+  if (quantity > product.stockCount) {
+    throw new HttpError(409, 'Requested quantity exceeds the available stock.');
   }
+  item.quantity = quantity;
+  if (customNote !== undefined) item.customNote = customNote;
 
   await cart.save();
   return cart.populate('items.product');

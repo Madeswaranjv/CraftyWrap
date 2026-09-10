@@ -274,8 +274,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const addToCart = useCallback(async (product: CatalogProduct, quantity = 1, customNote = '') => {
+    const targetId = product.databaseId || product.id || product.slug;
+
     setCart((currentCart) => {
-      const existingIndex = currentCart.findIndex((item) => item.product.id === product.id);
+      const existingIndex = currentCart.findIndex((item) =>
+        item.product.id === product.id || item.product.slug === product.slug || item.product.databaseId === product.databaseId
+      );
       if (existingIndex >= 0) {
         const updated = [...currentCart];
         updated[existingIndex] = {
@@ -292,7 +296,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const remoteCart = await apiRequest<RemoteCart>('/carts/items', {
         ...requestOptions(),
         method: 'POST',
-        body: JSON.stringify({ productId: product.databaseId, quantity, customNote }),
+        body: JSON.stringify({ productId: targetId, quantity, customNote }),
       });
       applyCart(remoteCart);
     } catch (error) {
@@ -301,18 +305,76 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [applyCart, refreshCart, requestOptions, showNotification]);
 
-  const updateQuantity = useCallback(async (productId: string, nextQuantity: number) => {
-    // 1. Update UI state instantly
-    setCart((currentCart) => {
-      if (nextQuantity <= 0) {
-        return currentCart.filter((item) => item.product.id !== productId);
-      }
-      return currentCart.map((item) =>
-        item.product.id === productId ? { ...item, quantity: nextQuantity } : item
-      );
-    });
+  const removeFromCart = useCallback(async (productId: string) => {
+    // 1. Cancel any pending debounced quantity timer for this product
+    const existingTimer = quantityTimeoutsRef.current.get(productId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      quantityTimeoutsRef.current.delete(productId);
+    }
 
-    // 2. Debounce backend sync call per product so rapid clicks don't race
+    const item = cart.find(
+      (cartItem) =>
+        cartItem.product.id === productId ||
+        cartItem.product.databaseId === productId ||
+        cartItem.product.slug === productId
+    );
+
+    const targetId = item?.product?.databaseId || item?.product?.id || item?.product?.slug || productId;
+    const previousCart = cart;
+
+    // 2. Immediately remove from local state
+    setCart((currentCart) =>
+      currentCart.filter(
+        (cartItem) =>
+          cartItem.product.id !== productId &&
+          cartItem.product.databaseId !== productId &&
+          cartItem.product.slug !== productId
+      )
+    );
+
+    // 3. Immediately delete from backend database
+    try {
+      const remoteCart = await apiRequest<RemoteCart>(`/carts/items/${encodeURIComponent(targetId)}`, {
+        ...requestOptions(),
+        method: 'DELETE',
+      });
+      applyCart(remoteCart);
+    } catch (error) {
+      setCart(previousCart);
+      showNotification(error instanceof Error ? error.message : 'Unable to remove item.');
+      void refreshCart();
+    }
+  }, [applyCart, cart, requestOptions, showNotification, refreshCart]);
+
+  const updateQuantity = useCallback(async (productId: string, nextQuantity: number) => {
+    // 1. If quantity is 0 or less, immediately remove the item completely (no debounce delay!)
+    if (nextQuantity <= 0) {
+      await removeFromCart(productId);
+      return;
+    }
+
+    // 2. Identify target item before state changes
+    const targetItem = cart.find(
+      (i: CartItem) =>
+        i.product.id === productId ||
+        i.product.databaseId === productId ||
+        i.product.slug === productId
+    );
+    const targetId = targetItem?.product?.databaseId || targetItem?.product?.id || targetItem?.product?.slug || productId;
+
+    // 3. Update UI state instantly
+    setCart((currentCart) =>
+      currentCart.map((item) =>
+        item.product.id === productId ||
+        item.product.databaseId === productId ||
+        item.product.slug === productId
+          ? { ...item, quantity: nextQuantity }
+          : item
+      )
+    );
+
+    // 4. Debounce backend sync call per product so rapid clicks don't race
     const existingTimer = quantityTimeoutsRef.current.get(productId);
     if (existingTimer) {
       clearTimeout(existingTimer);
@@ -320,59 +382,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const timer = setTimeout(async () => {
       quantityTimeoutsRef.current.delete(productId);
-      const targetItem = cartRef.current.find((i: CartItem) => i.product.id === productId);
 
       try {
-        if (nextQuantity <= 0) {
-          if (targetItem?.product?.databaseId) {
-            await apiRequest(`/carts/items/${targetItem.product.databaseId}`, {
-              ...requestOptions(), method: 'DELETE',
-            });
-          }
-        } else {
-          const dbId = targetItem?.product?.databaseId;
-          if (dbId) {
-            const remoteCart = await apiRequest<RemoteCart>(`/carts/items/${dbId}`, {
-              ...requestOptions(),
-              method: 'PATCH',
-              body: JSON.stringify({ quantity: nextQuantity }),
-            });
-            const next = normalizeCart(remoteCart);
-            setGiftWrapState(next.giftWrap);
-            setGiftNoteState(next.giftNote);
-            setPromoCodeState(next.promoCode);
-          }
-        }
+        const remoteCart = await apiRequest<RemoteCart>(`/carts/items/${encodeURIComponent(targetId)}`, {
+          ...requestOptions(),
+          method: 'PATCH',
+          body: JSON.stringify({ quantity: nextQuantity }),
+        });
+        const next = normalizeCart(remoteCart);
+        setGiftWrapState(next.giftWrap);
+        setGiftNoteState(next.giftNote);
+        setPromoCodeState(next.promoCode);
       } catch (error) {
         showNotification(error instanceof Error ? error.message : 'Unable to sync quantity.');
+        void refreshCart();
       }
-    }, 350);
+    }, 300);
 
     quantityTimeoutsRef.current.set(productId, timer);
-  }, [requestOptions, showNotification]);
-
-  const removeFromCart = useCallback(async (productId: string) => {
-    const item = cart.find((cartItem) => cartItem.product.id === productId);
-    if (!item) return;
-
-    const previousCart = cart;
-
-    setCart((currentCart) => currentCart.filter((cartItem) => cartItem.product.id !== productId));
-
-    try {
-      const remoteCart = await apiRequest<RemoteCart>(`/carts/items/${item.product.databaseId}`, {
-        ...requestOptions(), method: 'DELETE',
-      });
-      applyCart(remoteCart);
-    } catch (error) {
-      setCart(previousCart);
-      showNotification(error instanceof Error ? error.message : 'Unable to remove item.');
-    }
-  }, [applyCart, cart, requestOptions, showNotification]);
+  }, [cart, removeFromCart, requestOptions, showNotification, refreshCart]);
 
   const clearCart = useCallback(async () => {
-    await apiRequest('/carts/current', { ...requestOptions(), method: 'DELETE' });
-    applyCart({ items: [] });
+    quantityTimeoutsRef.current.forEach((t) => clearTimeout(t));
+    quantityTimeoutsRef.current.clear();
+    setCart([]);
+    try {
+      await apiRequest('/carts/current', { ...requestOptions(), method: 'DELETE' });
+      applyCart({ items: [] });
+    } catch {
+      applyCart({ items: [] });
+    }
   }, [applyCart, requestOptions]);
 
   const updateSettings = useCallback(async (settings: Partial<Pick<RemoteCart, 'giftWrap' | 'giftNote' | 'promoCode'>>) => {

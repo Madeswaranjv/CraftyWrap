@@ -29,7 +29,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 };
 
 export default function CheckoutPage() {
-  const { cart, subtotal, giftWrap, user, clearCart, addOrder } = useCart();
+  const { cart, subtotal, giftWrap, user, clearCart, addOrder, refreshCart } = useCart();
   const router = useRouter();
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -37,6 +37,10 @@ export default function CheckoutPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [pendingDemoOrder, setPendingDemoOrder] = useState<Order | null>(null);
   const [selectedDemoOption, setSelectedDemoOption] = useState<'card' | 'upi' | 'netbanking' | 'wallet'>('upi');
+
+  React.useEffect(() => {
+    void refreshCart();
+  }, [refreshCart]);
 
   const confirmDemoPayment = async () => {
     if (!pendingDemoOrder) return;

@@ -8,7 +8,7 @@ import { sendSuccess } from '../utils/apiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
 import { serializeCart } from '../utils/serializers';
 
-export const addCartItemSchema = z.object({ productId: z.string().regex(/^[a-f\d]{24}$/i), quantity: z.number().int().min(1).max(100), customNote: z.string().trim().max(500).optional() });
+export const addCartItemSchema = z.object({ productId: z.string().min(1).max(120), quantity: z.number().int().min(1).max(100), customNote: z.string().trim().max(500).optional() });
 export const updateCartItemSchema = z.object({ quantity: z.number().int().min(0).max(100), customNote: z.string().trim().max(500).optional() });
 export const cartSettingsSchema = z.object({ giftWrap: z.boolean().optional(), giftNote: z.string().trim().max(500).optional(), promoCode: z.string().trim().max(50).optional().nullable() });
 export const mergeCartSchema = z.object({ cartToken: z.string().min(16).max(200) });

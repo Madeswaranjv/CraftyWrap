@@ -34,7 +34,18 @@ function createRazorpayClient(): Razorpay | undefined {
 
 export async function createOrderFromCart(input: CheckoutInput): Promise<CheckoutResult> {
   const cart = await Cart.findOne(input.owner).populate('items.product');
-  if (!cart || cart.items.length === 0) {
+  if (!cart) {
+    throw new HttpError(400, 'Your cart is empty.');
+  }
+
+  // Sanitize cart items: completely drop any zero-quantity or deleted/null products
+  const initialItemCount = cart.items.length;
+  cart.items = cart.items.filter((item: any) => item.product != null && item.quantity > 0);
+  if (cart.items.length !== initialItemCount) {
+    await cart.save();
+  }
+
+  if (cart.items.length === 0) {
     throw new HttpError(400, 'Your cart is empty.');
   }
   if (!input.owner.user && !input.guestEmail) {
