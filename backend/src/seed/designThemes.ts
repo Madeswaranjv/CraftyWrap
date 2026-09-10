@@ -64,6 +64,13 @@ const designThemes = [
     icon: '🐥',
     displayOrder: 9,
   },
+  {
+    name: 'Anime',
+    slug: 'anime',
+    description: 'Lively characters from various Anime franchises',
+    icon: '/icons/anime.png',
+    displayOrder: 10,
+  },
 ] as const;
 
 export async function seedDesignThemes(): Promise<void> {

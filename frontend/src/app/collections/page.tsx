@@ -2,16 +2,19 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, LayoutGrid, Layers } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Pagination } from '@/components/ui/pagination';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductGridSkeleton } from '@/components/skeletons/ProductGridSkeleton';
 import { CustomSelect } from '@/components/CustomSelect';
 import { StaggeredGrid } from '@/components/motion/StaggeredGrid';
+import { Sidebar, SidebarBody, SidebarLink } from '@/components/ui/sidebar';
 import { apiRequest } from '@/lib/api';
 import { CatalogProduct, CatalogTheme, toCatalogProduct, toCatalogTheme } from '@/lib/catalog';
+import { cn } from '@/lib/utils';
 
-const CATALOG_PAGE_SIZE = 12;
+const CATALOG_PAGE_SIZE = 15;
 const MAX_CATALOG_PRICE = 5000;
 
 interface CatalogResponse {
@@ -93,6 +96,7 @@ function CollectionsContent() {
   const [catalogRetry, setCatalogRetry] = useState(0);
   const [searchInput, setSearchInput] = useState(catalogParams.search);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const updateCatalogParams = useCallback((updates: Record<string, string | number | null | undefined>, replace = false) => {
     const nextParams = new URLSearchParams(activeQuery);
@@ -236,204 +240,264 @@ function CollectionsContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* 1. Header Headline */}
-      <div>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-warmbrown-800 dark:text-peach-100 tracking-tight">
-          Our Collections
-        </h1>
-      </div>
+    <div className="w-full px-2 sm:px-4 lg:px-6 py-6">
+      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-start">
+        {/* Left Animated Sidebar */}
+        <Sidebar open={isSidebarOpen} setOpen={setIsSidebarOpen}>
+          <SidebarBody className="justify-between gap-4 max-h-[calc(100vh-6rem)] sticky top-20">
+            <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden pr-1 scrollbar-hover-only">
+              <div className="flex items-center gap-2.5 px-2 py-2 mb-2 border-b border-peach-100 dark:border-warmbrown-900/60 pb-3">
+                <LayoutGrid className="w-5 h-5 text-warmbrown-700 dark:text-peach-300 shrink-0" />
+                {isSidebarOpen && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col"
+                  >
+                    <span className="font-extrabold text-sm text-warmbrown-900 dark:text-peach-100">
+                      Collections
+                    </span>
+                    <span className="text-[10px] text-warmbrown-500 dark:text-peach-300/60 uppercase tracking-widest font-mono">
+                      Design Themes
+                    </span>
+                  </motion.div>
+                )}
+              </div>
 
-      {/* 2. Top Filter Controls (3 Input Columns: Search, Price, Sort) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-        {/* Search Input */}
-        <div className="space-y-1">
-          <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
-            <span>Search</span>
-            {searchInput && (
+              <div className="flex flex-col gap-1">
+                {/* All Collections Link */}
+                {(() => {
+                  const isAllSelected = catalogParams.theme === 'All' && catalogParams.productType === 'All';
+                  return (
+                    <SidebarLink
+                      link={{
+                        label: "All Collections",
+                        icon: (
+                          <Layers
+                            className={cn(
+                              "w-4 h-4 shrink-0 transition-colors",
+                              isAllSelected ? "text-white" : "text-warmbrown-800 dark:text-peach-100"
+                            )}
+                          />
+                        ),
+                        isActive: isAllSelected,
+                        count: pagination.total,
+                        onClick: () => updateCatalogParams({ theme: null, category: null, productType: null }),
+                      }}
+                    />
+                  );
+                })()}
+
+                {/* Themes List */}
+                {designThemesList.map((theme) => (
+                  <SidebarLink
+                    key={theme._id || theme.id}
+                    link={{
+                      label: theme.name,
+                      icon: (
+                        theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
+                          <img src={theme.icon} alt={theme.name} className="h-4 w-4 object-contain rounded shrink-0" />
+                        ) : (
+                          <span className="text-sm shrink-0 leading-none">{theme.icon || '🧶'}</span>
+                        )
+                      ),
+                      isActive: catalogParams.theme === theme.name,
+                      count: theme.itemCount,
+                      onClick: () => updateCatalogParams({ theme: theme.name }),
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Info / Quick Reset */}
+            {hasActiveFilters && (
+              <div className="border-t border-peach-100 dark:border-warmbrown-900/60 pt-3 px-1">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="w-full text-xs font-bold py-2 px-3 rounded-xl bg-peach-100/70 hover:bg-peach-200 text-warmbrown-800 dark:bg-warmbrown-900 dark:hover:bg-warmbrown-800 dark:text-peach-200 transition-colors text-center"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
+          </SidebarBody>
+        </Sidebar>
+
+        {/* Right Main Content */}
+        <div className="flex-1 w-full min-w-0 space-y-6">
+          {/* 1. Header Headline */}
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-warmbrown-800 dark:text-peach-100 tracking-tight">
+              Our Collections
+            </h1>
+            <p className="text-xs sm:text-sm text-warmbrown-600 dark:text-peach-200/70 mt-1">
+              Handmade yarn dolls, keychains, and plush accessories crafted with love.
+            </p>
+          </div>
+
+          {/* 2. Top Filter Controls (3 Input Columns: Search, Price, Sort) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+            {/* Search Input */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
+                <span>Search</span>
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchInput('');
+                      updateCatalogParams({ search: null });
+                    }}
+                    className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => {
+                    setSearchInput(e.target.value);
+                    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                    searchDebounceRef.current = setTimeout(() => {
+                      updateCatalogParams({ search: e.target.value.trim() || null });
+                    }, 350);
+                  }}
+                  placeholder="Enter product name..."
+                  data-search-box
+                  className="search-box w-full bg-white dark:bg-[#1F1610] border border-peach-200 dark:border-warmbrown-800 rounded-xl px-3.5 py-2.5 text-xs text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-500 outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 shadow-xs"
+                />
+                <Search size={14} className="absolute right-3.5 text-warmbrown-400 dark:text-peach-300/60 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Price Filter Dropdown */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
+                <span>Price</span>
+                {selectedPriceKey !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => updateCatalogParams({ minPrice: null, maxPrice: null })}
+                    className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <CustomSelect
+                value={selectedPriceKey}
+                onChange={(val) => handlePriceOptionChange(String(val))}
+                options={[
+                  { value: 'all', label: 'All Prices' },
+                  { value: 'under-250', label: 'Under ₹250' },
+                  { value: 'under-500', label: 'Under ₹500' },
+                  { value: 'above-500', label: 'Above ₹500' },
+                ]}
+              />
+            </div>
+
+            {/* Sort By Dropdown */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
+                <span>Sort By</span>
+                {catalogParams.sort !== 'featured' && (
+                  <button
+                    type="button"
+                    onClick={() => updateCatalogParams({ sort: null })}
+                    className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <CustomSelect
+                value={catalogParams.sort}
+                onChange={(val) => updateCatalogParams({ sort: String(val) === 'featured' ? null : String(val) })}
+                options={[
+                  { value: 'featured', label: 'Featured / Popular' },
+                  { value: 'price-low', label: 'Price: Low to High' },
+                  { value: 'price-high', label: 'Price: High to Low' },
+                  { value: 'rating', label: 'Highest Rated' },
+                  { value: 'newest', label: 'Newest Additions' },
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* 3. Active Filters Reset Bar (If filters applied) */}
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between bg-peach-50 dark:bg-[#1F1610] p-3 px-4 rounded-xl border border-peach-200 dark:border-warmbrown-800 text-xs">
+              <div className="flex items-center gap-2 text-warmbrown-700 dark:text-peach-200 font-medium">
+                <span>Filtering by:</span>
+                {catalogParams.theme !== 'All' && <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">{catalogParams.theme}</span>}
+                {catalogParams.search && <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">“{catalogParams.search}”</span>}
+                {selectedPriceKey !== 'all' && (
+                  <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">
+                    {selectedPriceKey === 'under-250' ? 'Under ₹250' : selectedPriceKey === 'under-500' ? 'Under ₹500' : 'Above ₹500'}
+                  </span>
+                )}
+                {catalogParams.sort !== 'featured' && (
+                  <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">
+                    Sort: {catalogParams.sort}
+                  </span>
+                )}
+              </div>
               <button
                 type="button"
-                onClick={() => {
-                  setSearchInput('');
-                  updateCatalogParams({ search: null });
-                }}
-                className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
+                onClick={resetFilters}
+                className="font-bold text-warmbrown-800 dark:text-peach-100 hover:text-warmbrown-600 dark:hover:text-peach-300 underline"
               >
-                Clear
+                Clear All
               </button>
-            )}
-          </div>
-          <div className="relative flex items-center">
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => {
-                setSearchInput(e.target.value);
-                if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                searchDebounceRef.current = setTimeout(() => {
-                  updateCatalogParams({ search: e.target.value.trim() || null });
-                }, 350);
-              }}
-              placeholder="Enter product name..."
-              className="w-full bg-white dark:bg-[#1F1610] border border-peach-200 dark:border-warmbrown-800 rounded-xl px-3.5 py-2.5 text-xs text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-500 outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 shadow-xs"
+            </div>
+          )}
+
+          {/* 4. Products Catalog Grid or States */}
+          {catalogError ? (
+            <div className="text-center py-20 space-y-4 bg-white dark:bg-[#1F1610] rounded-3xl border border-peach-200 dark:border-warmbrown-800 p-8 shadow-sm">
+              <div className="w-16 h-16 bg-peach-100 dark:bg-warmbrown-900 rounded-full flex items-center justify-center text-warmbrown-600 dark:text-peach-300 mx-auto text-2xl font-bold">
+                ⚠️
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-warmbrown-800 dark:text-peach-100">Unable to load dolls</h3>
+                <p className="text-xs text-warmbrown-600 dark:text-peach-200/70 max-w-sm mx-auto">
+                  We encountered a connection issue while loading the catalog. Please try again.
+                </p>
+              </div>
+              <button
+                onClick={() => setCatalogRetry((r) => r + 1)}
+                className="bg-warmbrown-800 hover:bg-warmbrown-900 text-white px-6 py-2.5 rounded-full text-xs font-bold transition-colors shadow-xs"
+              >
+                Retry
+              </button>
+            </div>
+          ) : isCatalogLoading ? (
+            <ProductGridSkeleton
+              count={10}
+              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 sm:gap-5"
             />
-            <Search size={14} className="absolute right-3.5 text-warmbrown-400 dark:text-peach-300/60 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Price Filter Dropdown */}
-        <div className="space-y-1">
-          <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
-            <span>Price</span>
-            {selectedPriceKey !== 'all' && (
-              <button
-                type="button"
-                onClick={() => updateCatalogParams({ minPrice: null, maxPrice: null })}
-                className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <CustomSelect
-            value={selectedPriceKey}
-            onChange={(val) => handlePriceOptionChange(String(val))}
-            options={[
-              { value: 'all', label: 'All Prices' },
-              { value: 'under-250', label: 'Under ₹250' },
-              { value: 'under-500', label: 'Under ₹500' },
-              { value: 'above-500', label: 'Above ₹500' },
-            ]}
-          />
-        </div>
-
-        {/* Sort By Dropdown */}
-        <div className="space-y-1">
-          <div className="flex justify-between items-center text-xs font-bold text-warmbrown-700 dark:text-peach-200">
-            <span>Sort By</span>
-            {catalogParams.sort !== 'featured' && (
-              <button
-                type="button"
-                onClick={() => updateCatalogParams({ sort: null })}
-                className="text-[11px] text-warmbrown-500 dark:text-peach-300 hover:text-warmbrown-800 dark:hover:text-peach-100 underline"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <CustomSelect
-            value={catalogParams.sort}
-            onChange={(val) => updateCatalogParams({ sort: String(val) === 'featured' ? null : String(val) })}
-            options={[
-              { value: 'featured', label: 'Featured / Popular' },
-              { value: 'price-low', label: 'Price: Low to High' },
-              { value: 'price-high', label: 'Price: High to Low' },
-              { value: 'rating', label: 'Highest Rated' },
-              { value: 'newest', label: 'Newest Additions' },
-            ]}
-          />
-        </div>
-      </div>
-
-      {/* 3. Horizontal Category Navigation Tabs Bar */}
-      <div className="border-b border-peach-200 dark:border-warmbrown-800 overflow-x-auto scrollbar-none flex items-center gap-6 sm:gap-10 text-xs font-bold uppercase tracking-wider pt-2">
-        <button
-          type="button"
-          onClick={() => updateCatalogParams({ theme: null, category: null, productType: null })}
-          className={`pb-3.5 whitespace-nowrap transition-colors border-b-2 ${
-            catalogParams.theme === 'All' && catalogParams.productType === 'All'
-              ? 'border-warmbrown-800 dark:border-peach-300 text-warmbrown-900 dark:text-peach-100 font-extrabold'
-              : 'border-transparent text-warmbrown-500 dark:text-peach-300/60 hover:text-warmbrown-800 dark:hover:text-peach-100'
-          }`}
-        >
-          All Collections ({pagination.total})
-        </button>
-
-        {designThemesList.map((theme) => (
-          <button
-            key={theme._id || theme.id}
-            type="button"
-            onClick={() => updateCatalogParams({ theme: theme.name })}
-            className={`pb-3.5 whitespace-nowrap transition-colors border-b-2 flex items-center gap-2 ${
-              catalogParams.theme === theme.name
-                ? 'border-warmbrown-800 dark:border-peach-300 text-warmbrown-900 dark:text-peach-100 font-extrabold'
-                : 'border-transparent text-warmbrown-500 dark:text-peach-300/60 hover:text-warmbrown-800 dark:hover:text-peach-100'
-            }`}
-          >
-            {theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
-              <img src={theme.icon} alt={theme.name} className="h-4 w-auto max-w-[32px] object-contain rounded inline-block" />
-            ) : (
-              <span>{theme.icon}</span>
-            )}
-            <span>{theme.name}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* 4. Active Filters Reset Bar (If filters applied) */}
-      {hasActiveFilters && (
-        <div className="flex items-center justify-between bg-peach-50 dark:bg-[#1F1610] p-3 px-4 rounded-xl border border-peach-200 dark:border-warmbrown-800 text-xs">
-          <div className="flex items-center gap-2 text-warmbrown-700 dark:text-peach-200 font-medium">
-            <span>Filtering by:</span>
-            {catalogParams.theme !== 'All' && <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">{catalogParams.theme}</span>}
-            {catalogParams.search && <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">“{catalogParams.search}”</span>}
-            {selectedPriceKey !== 'all' && (
-              <span className="font-bold bg-white dark:bg-warmbrown-900 px-2 py-0.5 rounded border border-peach-200 dark:border-warmbrown-800">
-                {selectedPriceKey === 'under-250' && 'Under ₹250'}
-                {selectedPriceKey === 'under-500' && 'Under ₹500'}
-                {selectedPriceKey === 'above-500' && 'Above ₹500'}
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="text-rose-600 dark:text-rose-400 font-bold hover:underline"
-          >
-            Reset All Filters
-          </button>
-        </div>
-      )}
-
-      {/* 5. Product Grid & Empty State */}
-      {catalogError ? (
-        <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-12 text-center border border-peach-200 dark:border-warmbrown-800 space-y-4">
-          <h3 className="text-xl font-bold text-warmbrown-800 dark:text-peach-100">Unable to load products.</h3>
-          <button
-            type="button"
-            onClick={() => setCatalogRetry((v) => v + 1)}
-            className="bg-warmbrown-800 dark:bg-warmbrown-700 text-white px-6 py-2.5 rounded-full text-xs font-bold hover:bg-warmbrown-900 transition-colors shadow-sm"
-          >
-            Try Again
-          </button>
-        </div>
-      ) : !hasInitialFetched ? (
-        <ProductGridSkeleton count={8} />
-      ) : (
-        <div className="space-y-8">
-          {/* Product Grid / Loading State */}
-          {isCatalogLoading ? (
-            <ProductGridSkeleton count={products.length > 0 ? products.length : 8} />
           ) : products.length > 0 ? (
-            <StaggeredGrid key={productRequestQuery} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
+            <StaggeredGrid className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 sm:gap-5">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.id || product.slug} product={product} />
               ))}
             </StaggeredGrid>
-          ) : hasActiveFilters ? (
-            /* Empty State Safeguard when filters match 0 products */
-            <div className="bg-white dark:bg-[#1F1610] rounded-3xl p-12 text-center border border-peach-200 dark:border-warmbrown-800 space-y-4 my-6 shadow-xs">
-              <span className="text-6xl block">🧶</span>
-              <h3 className="text-xl font-extrabold text-warmbrown-800 dark:text-peach-100">
-                No products found matching active filters
-              </h3>
-              <p className="text-xs sm:text-sm text-warmbrown-600 dark:text-peach-200/70 max-w-md mx-auto leading-relaxed">
-                {catalogParams.search ? (
-                  <>No items match search term <span className="font-bold text-warmbrown-800 dark:text-peach-100">“{catalogParams.search}”</span> under category <span className="font-bold text-warmbrown-800 dark:text-peach-100">{catalogParams.theme}</span>.</>
-                ) : (
-                  <>No items found in <span className="font-bold text-warmbrown-800 dark:text-peach-100">{catalogParams.theme}</span> matching your price filter.</>
-                )}
-              </p>
+          ) : hasInitialFetched ? (
+            <div className="text-center py-20 space-y-4 bg-white dark:bg-[#1F1610] rounded-3xl border border-peach-200 dark:border-warmbrown-800 p-8 shadow-sm">
+              <div className="w-16 h-16 bg-peach-100 dark:bg-warmbrown-900 rounded-full flex items-center justify-center text-warmbrown-600 dark:text-peach-300 mx-auto text-2xl font-bold">
+                🧶
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-warmbrown-800 dark:text-peach-100">No dolls match your criteria</h3>
+                <p className="text-xs text-warmbrown-600 dark:text-peach-200/70 max-w-sm mx-auto">
+                  Try adjusting your filters, selecting a different theme, or clearing your search term.
+                </p>
+              </div>
               <div className="pt-2 flex flex-wrap justify-center gap-3">
                 <button
                   type="button"
@@ -445,10 +509,13 @@ function CollectionsContent() {
               </div>
             </div>
           ) : (
-            <ProductGridSkeleton count={8} />
+            <ProductGridSkeleton
+              count={10}
+              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 sm:gap-5"
+            />
           )}
 
-          {/* Pagination Navigation Controls - PERSISTENT AT ALL TIMES */}
+          {/* 5. Pagination Navigation Controls - PERSISTENT AT ALL TIMES */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-center pt-6 pb-2">
               <Pagination
@@ -460,7 +527,7 @@ function CollectionsContent() {
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   Send,
   Image as ImageIcon,
 } from 'lucide-react';
+import { FlowButton } from '@/components/ui/flow-button';
 
 function CustomOrderContent() {
   const searchParams = useSearchParams();
@@ -119,25 +120,26 @@ function CustomOrderContent() {
               Want faster confirmation or to send live voice notes?
             </span>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <a
-                href="https://www.instagram.com/crafty_wrap"
-                target="_blank"
-                rel="noreferrer"
-                className="bg-warmbrown-800 hover:bg-warmbrown-900 text-white p-3.5 rounded-2xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2"
-              >
-                <InstagramLogo size={18} className="text-white" />
-                <span>Instagram (@crafty_wrap)</span>
-              </a>
-
+            <div className="flex items-center justify-center gap-6 pt-2">
               <a
                 href="https://wa.me/919363515015"
                 target="_blank"
                 rel="noreferrer"
-                className="bg-[#0F6543] hover:bg-[#0B4F34] text-white p-3.5 rounded-2xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2"
+                aria-label="WhatsApp (+91 93635 15015)"
+                title="WhatsApp (+91 93635 15015)"
+                className="text-warmbrown-800 hover:text-warmbrown-600 dark:text-peach-100 dark:hover:text-white transition-transform hover:scale-125 p-1 inline-flex items-center justify-center"
               >
-                <WhatsAppLogo size={18} className="text-white" />
-                <span>WhatsApp (+91 93635 15015)</span>
+                <WhatsAppLogo size={28} className="w-7 h-7" />
+              </a>
+              <a
+                href="https://www.instagram.com/crafty_wrap"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram (@crafty_wrap)"
+                title="Instagram (@crafty_wrap)"
+                className="text-warmbrown-800 hover:text-warmbrown-600 dark:text-peach-100 dark:hover:text-white transition-transform hover:scale-125 p-1 inline-flex items-center justify-center"
+              >
+                <InstagramLogo size={28} className="w-7 h-7" />
               </a>
             </div>
           </div>
@@ -270,35 +272,40 @@ function CustomOrderContent() {
             </div>
           </div>
 
-          <button
+          <FlowButton
             type="submit"
-            className="w-full bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50 py-4 rounded-full font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
-          >
-            <Send size={16} />
-            <span>Submit Custom Doll Request</span>
-          </button>
+            variant="filled"
+            icon={Send}
+            text={isSubmitting ? "Submitting Request..." : "Submit Custom Doll Request"}
+            disabled={isSubmitting}
+            className="w-full py-4 text-sm font-bold shadow-md"
+          />
 
           {/* Contact Callout Banner */}
           <div className="bg-peach-50/80 dark:bg-warmbrown-900/60 p-4 sm:p-5 rounded-2xl border border-peach-200 dark:border-warmbrown-800 text-center space-y-2 mt-4">
             <p className="text-xs sm:text-sm font-extrabold text-warmbrown-800 dark:text-peach-100">
               Want even more customization then feel free to contact us!
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+            <div className="flex items-center justify-center gap-6 pt-2">
               <a
                 href="https://wa.me/919363515015"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 bg-[#0F6543] hover:bg-[#0B4F34] text-white px-4 py-2 rounded-full text-xs font-bold transition-all shadow-xs"
+                aria-label="WhatsApp (+91 93635 15015)"
+                title="WhatsApp (+91 93635 15015)"
+                className="text-warmbrown-800 hover:text-warmbrown-600 dark:text-peach-100 dark:hover:text-white transition-transform hover:scale-125 p-1 inline-flex items-center justify-center"
               >
-                <WhatsAppLogo size={15} /> WhatsApp (+91 93635 15015)
+                <WhatsAppLogo size={26} className="w-6.5 h-6.5" />
               </a>
               <a
                 href="https://www.instagram.com/crafty_wrap"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 bg-warmbrown-800 hover:bg-warmbrown-900 text-white px-4 py-2 rounded-full text-xs font-bold transition-all shadow-xs"
+                aria-label="Instagram (@crafty_wrap)"
+                title="Instagram (@crafty_wrap)"
+                className="text-warmbrown-800 hover:text-warmbrown-600 dark:text-peach-100 dark:hover:text-white transition-transform hover:scale-125 p-1 inline-flex items-center justify-center"
               >
-                <InstagramLogo size={15} /> Instagram (@crafty_wrap)
+                <InstagramLogo size={26} className="w-6.5 h-6.5" />
               </a>
             </div>
           </div>

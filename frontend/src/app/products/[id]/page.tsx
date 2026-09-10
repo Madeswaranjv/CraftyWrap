@@ -425,10 +425,10 @@ export default function ProductDetailPage() {
               href="https://wa.me/919363515015"
               target="_blank"
               rel="noreferrer"
-              className="flex flex-col items-center gap-1 hover:text-emerald-700 transition-colors"
+              className="flex flex-col items-center gap-1 text-warmbrown-800 hover:text-warmbrown-600 dark:text-peach-200 dark:hover:text-white transition-colors"
               title="Chat on WhatsApp +91 93635 15015"
             >
-              <WhatsAppLogo size={18} className="text-emerald-600" />
+              <WhatsAppLogo size={18} className="text-warmbrown-800 dark:text-peach-200" />
               <span>WhatsApp Help</span>
             </a>
           </div>

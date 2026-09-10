@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FAQS } from '@/data/mockData';
 import { CategoryTile } from '@/components/CategoryTile';
 import { CategoryGridSkeleton } from '@/components/skeletons/CategoryGridSkeleton';
-import { InstagramLogo, WhatsAppLogo } from '@/components/SocialIcons';
 import { FadeInSection } from '@/components/motion/FadeInSection';
 import { HeroIntroAnimation } from '@/components/motion/HeroIntroAnimation';
 import {
@@ -21,8 +20,19 @@ import {
   Heart,
   Package,
   MessageCircle,
-  ChevronDown,
+  Plus,
+  Minus,
 } from 'lucide-react';
+import { FlowButton } from '@/components/ui/flow-button';
+import {
+  CardCurtainReveal,
+  CardCurtainRevealBody,
+  CardCurtainRevealTitle,
+  CardCurtainRevealDescription,
+  CardCurtainRevealAction,
+  CardCurtainRevealFooter,
+  CardCurtain,
+} from '@/components/ui/card-curtain-reveal';
 
 declare global {
   interface Window {
@@ -140,20 +150,19 @@ export default function HomePage() {
               variants={heroSpringItemVariants}
               className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2"
             >
-              <Link
+              <FlowButton
                 href="/collections"
-                className="w-full sm:w-auto bg-white dark:bg-[#FFF9F4] hover:bg-peach-100 dark:hover:bg-white text-warmbrown-900 dark:text-[#3D2412] px-7 py-3.5 rounded-full font-extrabold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 group border border-peach-200/80 dark:border-white/90"
-              >
-                <span>Shop All Collections</span>
-                <ArrowRight size={16} className="text-warmbrown-800 dark:text-[#3D2412] group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
+                variant="outline"
+                text="Shop All Collections"
+                className="w-full sm:w-auto min-w-[220px] py-3.5 px-8 text-sm font-extrabold bg-white dark:bg-[#FFF9F4] text-warmbrown-900 dark:text-[#3D2412] border-peach-200/80 dark:border-white/90 shadow-md hover:shadow-xl"
+              />
+              <FlowButton
                 href="/custom-order"
-                className="w-full sm:w-auto bg-warmbrown-800 dark:bg-warmbrown-800 hover:bg-warmbrown-900 dark:hover:bg-warmbrown-700 text-peach-50 dark:text-peach-100 border border-warmbrown-700 dark:border-white/30 px-7 py-3.5 rounded-full font-bold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
-              >
-                <Wand2 size={16} className="text-peach-200" />
-                <span>Request Custom Doll</span>
-              </Link>
+                variant="filled"
+                icon={Wand2}
+                text="Request Custom Doll"
+                className="w-full sm:w-auto min-w-[220px] py-3.5 px-8 text-sm font-bold shadow-md hover:shadow-xl"
+              />
             </motion.div>
           </motion.div>
 
@@ -267,140 +276,206 @@ export default function HomePage() {
         )}
       </FadeInSection>
 
-      {/* 3. CUSTOM ORDER CALLOUT BANNER */}
+      {/* 3. CUSTOM ORDER CALLOUT BANNER - RECREATED WITH CARD CURTAIN REVEAL DESIGN THEME */}
       <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-warmbrown-800 via-warmbrown-700 to-warmbrown-900 dark:from-[#231812] dark:via-[#1F1610] dark:to-[#1A120B] rounded-3xl p-8 sm:p-12 text-peach-50 relative overflow-hidden shadow-xl border border-warmbrown-600 dark:border-warmbrown-800">
-          <div className="absolute right-0 top-0 w-96 h-96 bg-peach-300/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-8 space-y-4">
-              <div className="inline-flex items-center gap-2 bg-peach-300/20 text-peach-200 px-3.5 py-1 rounded-full text-xs font-bold">
-                <Wand2 size={14} /> Custom Handmade Creations
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
+        <CardCurtainReveal className="w-full min-h-[170px] sm:min-h-[200px] rounded-3xl border border-zinc-800/90 bg-zinc-950 text-zinc-50 shadow-2xl overflow-hidden relative group transition-all duration-500 gap-0">
+          <CardCurtainRevealBody className="pt-8 px-6 pb-2 sm:pt-10 sm:px-12 sm:pb-3 relative z-20 flex flex-col justify-center items-center text-center">
+            <div className="max-w-3xl mx-auto flex flex-col items-center justify-center space-y-2">
+              {/* Title: Centered, compact size fitting cleanly on 2 lines */}
+              <CardCurtainRevealTitle className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-snug">
                 Want Something One-of-a-Kind? <br />
-                Tell Us What You&apos;re Dreaming Of!
-              </h2>
-              <p className="text-xs sm:text-sm text-peach-200/90 max-w-xl leading-relaxed">
-                Have a favorite pet, cartoon character, or special memory? Share a description or reference picture and our artisan family will crochet it to life for you.
-              </p>
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                <Link
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-peach-200 via-amber-100 to-peach-400">
+                  Tell Us What You&apos;re Dreaming Of!
+                </span>
+              </CardCurtainRevealTitle>
+
+              {/* Description: Invisible first, shown on hover */}
+              <CardCurtainRevealDescription className="max-w-lg mx-auto">
+                <p className="text-xs sm:text-sm text-zinc-300/90 leading-relaxed font-normal pt-1">
+                  Have a favorite pet, cartoon character, or special memory? Share a description or reference picture and our artisan family will crochet it to life for you.
+                </p>
+              </CardCurtainRevealDescription>
+
+              {/* Action Button: Invisible first, shown on hover */}
+              <CardCurtainRevealAction className="pt-1 pb-1">
+                <FlowButton
                   href="/custom-order"
-                  className="bg-peach-300 hover:bg-peach-400 text-warmbrown-900 px-6 py-3 rounded-full font-bold text-xs shadow-md transition-all flex items-center gap-2"
-                >
-                  <Wand2 size={15} /> Start Custom Order Form
-                </Link>
-                <a
-                  href="https://www.instagram.com/crafty_wrap"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="bg-warmbrown-700/90 hover:bg-warmbrown-600 text-white px-5 py-3 rounded-full font-bold text-xs transition-all flex items-center gap-2 border border-warmbrown-500 shadow-xs"
-                >
-                  <InstagramLogo size={16} className="text-white" /> Instagram
-                </a>
-                <a
-                  href="https://wa.me/919363515015"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="bg-[#0F6543] hover:bg-[#0B4F34] text-white px-5 py-3 rounded-full font-bold text-xs transition-all flex items-center gap-2 border border-emerald-600 shadow-xs"
-                >
-                  <WhatsAppLogo size={16} className="text-white" /> WhatsApp (+91 93635 15015)
-                </a>
-              </div>
+                  variant="light"
+                  icon={Wand2}
+                  text="Start Custom Order Form"
+                  className="min-w-[240px] px-8 py-3 text-xs font-bold shadow-xl"
+                />
+              </CardCurtainRevealAction>
             </div>
 
-            <div className="lg:col-span-4 flex items-center justify-center">
-              <div className="bg-warmbrown-900/80 dark:bg-warmbrown-950/80 p-6 rounded-2xl border border-warmbrown-600/50 dark:border-warmbrown-800 text-center space-y-2 max-w-xs w-full">
-                <span className="text-5xl block">🧶</span>
-                <p className="text-xs font-bold text-peach-200">
-                  Custom Turnaround Time
-                </p>
-                <p className="text-2xl font-extrabold text-white">3 – 5 Days</p>
-                <p className="text-[11px] text-peach-300/70">
-                  Includes photo approval before dispatch!
-                </p>
-              </div>
+            <CardCurtain className="bg-zinc-50/10 pointer-events-none" />
+          </CardCurtainRevealBody>
+
+          {/* Curtain Reveal Footer Showcase Image - seamlessly flush with no black separation */}
+          <CardCurtainRevealFooter className="mt-0 w-full relative overflow-hidden border-t-0">
+            <div className="h-36 sm:h-44 w-full relative">
+              <img
+                width="100%"
+                height="100%"
+                alt="Artisan yarn crafting workshop"
+                className="w-full h-full object-cover object-center brightness-95 contrast-105"
+                src="https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=1400&q=80"
+              />
             </div>
-          </div>
-        </div>
+          </CardCurtainRevealFooter>
+        </CardCurtainReveal>
       </FadeInSection>
 
       {/* 4. TRUST & SERVICES STRIP */}
       <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-[#1A120B] p-6 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-700 dark:text-peach-200 flex items-center justify-center shrink-0">
-              <Heart size={24} />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-bold text-warmbrown-800 dark:text-peach-100 text-base">Handmade with Care</h3>
-              <p className="text-xs text-warmbrown-600 dark:text-peach-200/70 leading-relaxed">
-                100% hand-crocheted using non-toxic, hypoallergenic yarns and safety-locked stitches.
-              </p>
-            </div>
-          </div>
+        <div className="rounded-[28px] sm:rounded-[32px] bg-white dark:bg-[#0A0604] p-3.5 sm:p-5 lg:p-6 border border-peach-200/90 dark:border-warmbrown-900/70 shadow-soft">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5">
+            {/* 001: Handmade with Care */}
+            <div className="relative overflow-hidden rounded-[22px] sm:rounded-[26px] bg-gradient-to-b from-[#FFF5EC] via-[#FDF0E5] to-[#F7DFC9] dark:from-[#2E180E] dark:via-[#23120A] dark:to-[#170B06] border border-peach-200/90 dark:border-peach-300/15 p-6 sm:p-7 min-h-[320px] sm:min-h-[360px] flex flex-col justify-between shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-peach-300 dark:hover:border-peach-300/35 hover:shadow-md group">
+              <div className="absolute -top-16 -right-16 w-36 h-36 bg-peach-400/15 dark:bg-peach-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-peach-400/25 transition-all duration-500" />
+              
+              <div>
+                <span className="font-mono text-xs tracking-widest text-warmbrown-600 dark:text-peach-300/60 uppercase font-bold">
+                  ( 001 )
+                </span>
+                <div className="pt-6 sm:pt-8">
+                  <Heart className="w-10 h-10 sm:w-11 sm:h-11 text-warmbrown-800 dark:text-peach-200 stroke-[1.75] group-hover:scale-105 transition-transform duration-300" />
+                </div>
+              </div>
 
-          <div className="bg-white dark:bg-[#1A120B] p-6 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
-              <Package size={24} />
+              <div className="pt-10 sm:pt-14 space-y-2">
+                <h3 className="font-extrabold text-base sm:text-lg tracking-wider uppercase text-warmbrown-900 dark:text-peach-50">
+                  Handmade with Care
+                </h3>
+                <p className="text-xs sm:text-sm text-warmbrown-700/90 dark:text-peach-100/75 leading-relaxed font-normal">
+                  100% hand-crocheted using non-toxic, hypoallergenic yarns and safety-locked stitches.
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <h3 className="font-bold text-warmbrown-800 dark:text-peach-100 text-base">Safe Gift Packaging</h3>
-              <p className="text-xs text-warmbrown-600 dark:text-peach-200/70 leading-relaxed">
-                Every order arrives in a padded gift box with custom birth tags and hand-written gift notes.
-              </p>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-[#1A120B] p-6 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 flex items-center justify-center shrink-0">
-              <MessageCircle size={24} />
+            {/* 002: Safe Gift Packaging */}
+            <div className="relative overflow-hidden rounded-[22px] sm:rounded-[26px] bg-gradient-to-b from-[#FFF9EE] via-[#FEF3DC] to-[#FCE8BD] dark:from-[#38220E] dark:via-[#2A1809] dark:to-[#1B0F05] border border-amber-200/90 dark:border-amber-300/15 p-6 sm:p-7 min-h-[320px] sm:min-h-[360px] flex flex-col justify-between shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-300 dark:hover:border-amber-300/35 hover:shadow-md group">
+              <div className="absolute -top-16 -right-16 w-36 h-36 bg-amber-400/15 dark:bg-amber-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-400/25 transition-all duration-500" />
+              
+              <div>
+                <span className="font-mono text-xs tracking-widest text-amber-700 dark:text-amber-300/60 uppercase font-bold">
+                  ( 002 )
+                </span>
+                <div className="pt-6 sm:pt-8">
+                  <Package className="w-10 h-10 sm:w-11 sm:h-11 text-amber-800 dark:text-amber-200 stroke-[1.75] group-hover:scale-105 transition-transform duration-300" />
+                </div>
+              </div>
+
+              <div className="pt-10 sm:pt-14 space-y-2">
+                <h3 className="font-extrabold text-base sm:text-lg tracking-wider uppercase text-amber-950 dark:text-amber-50">
+                  Safe Gift Packaging
+                </h3>
+                <p className="text-xs sm:text-sm text-amber-900/90 dark:text-amber-100/75 leading-relaxed font-normal">
+                  Every order arrives in a padded gift box with custom birth tags and hand-written gift notes.
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <h3 className="font-bold text-warmbrown-800 dark:text-peach-100 text-base">Direct Chat with Maker</h3>
-              <p className="text-xs text-warmbrown-600 dark:text-peach-200/70 leading-relaxed">
-                Chat directly with our artisan family on Instagram or WhatsApp for questions and updates.
-              </p>
+
+            {/* 003: Direct Chat with Maker */}
+            <div className="relative overflow-hidden rounded-[22px] sm:rounded-[26px] bg-gradient-to-b from-[#F2FAF5] via-[#E4F5EB] to-[#CEEBD9] dark:from-[#142C1E] dark:via-[#0E2015] dark:to-[#08130D] border border-emerald-200/90 dark:border-emerald-300/15 p-6 sm:p-7 min-h-[320px] sm:min-h-[360px] flex flex-col justify-between shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 dark:hover:border-emerald-300/35 hover:shadow-md group">
+              <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-400/15 dark:bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-400/25 transition-all duration-500" />
+              
+              <div>
+                <span className="font-mono text-xs tracking-widest text-emerald-700 dark:text-emerald-300/60 uppercase font-bold">
+                  ( 003 )
+                </span>
+                <div className="pt-6 sm:pt-8">
+                  <MessageCircle className="w-10 h-10 sm:w-11 sm:h-11 text-emerald-800 dark:text-emerald-200 stroke-[1.75] group-hover:scale-105 transition-transform duration-300" />
+                </div>
+              </div>
+
+              <div className="pt-10 sm:pt-14 space-y-2">
+                <h3 className="font-extrabold text-base sm:text-lg tracking-wider uppercase text-emerald-950 dark:text-emerald-50">
+                  Direct Chat with Maker
+                </h3>
+                <p className="text-xs sm:text-sm text-emerald-900/90 dark:text-emerald-100/75 leading-relaxed font-normal">
+                  Chat directly with our artisan family on Instagram or WhatsApp for questions and updates.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </FadeInSection>
 
       {/* 5. FAQ PREVIEW SECTION */}
-      <FadeInSection id="faq" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <FadeInSection id="faq" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="text-center space-y-2">
           <span className="text-xs font-bold text-warmbrown-500 dark:text-peach-300/60 uppercase tracking-widest">
             Got Questions?
           </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-warmbrown-800 dark:text-peach-100">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-warmbrown-800 dark:text-peach-100">
             Frequently Asked Questions
           </h2>
         </div>
 
-        <div className="space-y-3">
+        <div className="rounded-[28px] sm:rounded-[32px] bg-white dark:bg-[#140D08] border border-peach-200/80 dark:border-warmbrown-900/70 shadow-soft overflow-hidden divide-y divide-peach-200/60 dark:divide-warmbrown-900/60">
           {FAQS.map((faq, idx) => (
-            <div
-              key={idx}
-              className="bg-white dark:bg-[#1A120B] rounded-2xl border border-peach-200/80 dark:border-warmbrown-900/80 overflow-hidden shadow-xs transition-all"
-            >
+            <div key={idx} className="group transition-colors">
               <button
+                type="button"
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                className="w-full text-left p-4 sm:p-5 flex items-center justify-between gap-4 font-bold text-warmbrown-800 dark:text-peach-100 text-sm sm:text-base hover:text-warmbrown-600 dark:hover:text-peach-300 transition-colors"
+                className="w-full text-left py-5 sm:py-6 px-6 sm:px-8 flex items-center gap-4 sm:gap-5 cursor-pointer focus:outline-none transition-colors"
+                aria-expanded={openFaq === idx}
               >
-                <span>{faq.question}</span>
-                <ChevronDown
-                  size={18}
-                  className={`shrink-0 text-warmbrown-500 dark:text-peach-300/60 transition-transform duration-200 ${
-                    openFaq === idx ? 'rotate-180' : ''
-                  }`}
-                />
+                {openFaq === idx ? (
+                  <Minus className="w-5 h-5 sm:w-5.5 sm:h-5.5 shrink-0 text-warmbrown-900 dark:text-peach-200 stroke-[2.2]" />
+                ) : (
+                  <Plus className="w-5 h-5 sm:w-5.5 sm:h-5.5 shrink-0 text-warmbrown-500 dark:text-peach-300/70 stroke-[2.2] group-hover:text-warmbrown-800 dark:group-hover:text-peach-200 transition-colors" />
+                )}
+                <span className="font-bold text-base sm:text-lg lg:text-xl text-warmbrown-900 dark:text-peach-100 group-hover:text-warmbrown-700 dark:group-hover:text-peach-300 transition-colors">
+                  {faq.question}
+                </span>
               </button>
-              {openFaq === idx && (
-                <div className="px-4 sm:px-5 pb-5 text-xs sm:text-sm text-warmbrown-600 dark:text-peach-200/80 leading-relaxed border-t border-peach-100/60 dark:border-warmbrown-900/60 pt-3">
-                  {faq.answer}
-                </div>
-              )}
+
+              <AnimatePresence initial={false}>
+                {openFaq === idx && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-6 sm:px-8 pb-7 sm:pb-8 pt-1">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 pt-4 border-t border-peach-100 dark:border-warmbrown-900/40 items-end">
+                        {/* Left narrative answer */}
+                        <div className="lg:col-span-7">
+                          <p className="text-sm sm:text-base text-warmbrown-700 dark:text-peach-200/85 leading-relaxed font-normal">
+                            {faq.answer}
+                          </p>
+                        </div>
+
+                        {/* Right side metadata & action button */}
+                        <div className="lg:col-span-5 flex flex-col justify-between h-full space-y-5">
+                          <div>
+                            <span className="text-[11px] font-bold tracking-widest uppercase text-warmbrown-400 dark:text-peach-300/60 font-mono block mb-1.5">
+                              {faq.sideTitle || 'RELATED DETAILS'}
+                            </span>
+                            <p className="text-xs sm:text-sm text-warmbrown-600 dark:text-peach-200/70 leading-relaxed font-normal">
+                              {faq.sideDetails}
+                            </p>
+                          </div>
+
+                          <div className="pt-2 flex justify-start lg:justify-end">
+                            <FlowButton
+                              href={faq.actionHref || '/collections'}
+                              size="compact"
+                              variant="filled"
+                              text={faq.actionText || 'Explore More'}
+                              className="min-w-[150px] text-xs font-bold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ))}
         </div>

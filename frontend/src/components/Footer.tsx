@@ -39,22 +39,26 @@ export const Footer: React.FC = () => {
                 Every doll at CraftyWrap is 100% handcrafted with love by our small artisan family using ultra-soft plush yarn, hypoallergenic filling, and safety-locked stitches.
               </p>
 
-              <div className="pt-2 flex items-center gap-3 text-xs font-semibold text-peach-200">
-                <a
-                  href="https://www.instagram.com/crafty_wrap"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 bg-warmbrown-700/90 hover:bg-warmbrown-600 text-white px-4 py-2 rounded-full transition-all shadow-xs border border-warmbrown-500 font-bold"
-                >
-                  <InstagramLogo size={16} className="text-white" /> Instagram
-                </a>
+              <div className="pt-2 flex items-center gap-5 text-peach-200">
                 <a
                   href="https://wa.me/919363515015"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 bg-[#0F6543] hover:bg-[#0B4F34] text-white px-4 py-2 rounded-full transition-all shadow-xs border border-emerald-600 font-bold"
+                  aria-label="WhatsApp (+91 93635 15015)"
+                  title="WhatsApp (+91 93635 15015)"
+                  className="text-peach-200 hover:text-white transition-transform hover:scale-125 p-1 inline-flex items-center justify-center"
                 >
-                  <WhatsAppLogo size={16} className="text-white" /> WhatsApp
+                  <WhatsAppLogo size={24} className="w-6 h-6" />
+                </a>
+                <a
+                  href="https://www.instagram.com/crafty_wrap"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Instagram (@crafty_wrap)"
+                  title="Instagram (@crafty_wrap)"
+                  className="text-peach-200 hover:text-white transition-transform hover:scale-125 p-1 inline-flex items-center justify-center"
+                >
+                  <InstagramLogo size={24} className="w-6 h-6" />
                 </a>
               </div>
             </div>
@@ -103,9 +107,9 @@ export const Footer: React.FC = () => {
                   href="https://wa.me/919363515015"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 text-emerald-400 font-bold hover:underline"
+                  className="flex items-center gap-2 text-peach-200 hover:text-white font-bold transition-colors"
                 >
-                  <WhatsAppLogo size={16} className="text-emerald-400 shrink-0" />
+                  <WhatsAppLogo size={16} className="text-peach-200 shrink-0" />
                   <span>+91 93635 15015 (WhatsApp)</span>
                 </a>
                 <p className="text-[11px] text-peach-300/70">

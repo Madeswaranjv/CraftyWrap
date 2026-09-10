@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ChevronLeft,
 } from 'lucide-react';
+import { FlowButton } from '@/components/ui/flow-button';
 
 export default function CartPage() {
   const {
@@ -86,13 +87,13 @@ export default function CartPage() {
             You haven&apos;t added any handmade yarn dolls to your shopping cart yet!
           </p>
         </div>
-        <Link
+        <FlowButton
           href="/collections"
-          className="inline-flex items-center gap-2 bg-warmbrown-800 text-white px-7 py-3.5 rounded-full font-bold text-xs hover:bg-warmbrown-900 transition-colors shadow-md"
-        >
-          <ShoppingBag size={16} />
-          <span>Explore Collections Now</span>
-        </Link>
+          variant="filled"
+          icon={ShoppingBag}
+          text="Explore Collections Now"
+          className="min-w-[220px] py-3 text-xs font-bold shadow-md"
+        />
       </div>
     );
   }
@@ -299,13 +300,13 @@ export default function CartPage() {
               </div>
             </div>
 
-            <button
-              onClick={() => router.push('/checkout')}
-              className="w-full bg-warmbrown-800 hover:bg-warmbrown-900 text-peach-50 py-3.5 rounded-full font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
-            >
-              <span>Proceed to Checkout</span>
-              <ArrowRight size={16} />
-            </button>
+            <FlowButton
+              href="/checkout"
+              variant="filled"
+              icon={ArrowRight}
+              text="Proceed to Checkout"
+              className="w-full py-3.5 text-xs font-bold shadow-md"
+            />
           </div>
         </div>
       </div>

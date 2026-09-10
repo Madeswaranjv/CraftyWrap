@@ -455,9 +455,9 @@ export default function AccountPage() {
                                   )}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1 ml-1"
+                                  className="text-warmbrown-800 dark:text-peach-200 font-bold hover:underline inline-flex items-center gap-1 ml-1"
                                 >
-                                  <WhatsAppLogo size={14} className="text-emerald-600" />
+                                  <WhatsAppLogo size={14} className="text-warmbrown-800 dark:text-peach-200" />
                                   <span>Message us on WhatsApp (+91 93635 15015)</span>
                                 </a>{' '}
                                 with Order ID <strong>#{order.id}</strong>.

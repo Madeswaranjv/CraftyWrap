@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
@@ -30,6 +30,29 @@ interface AutocompleteItem {
   price: number;
 }
 
+const DEFAULT_THEMES: { _id: string; id: string; name: string; itemCount: number; icon?: string }[] = [
+  { _id: 'anime', id: 'anime', name: 'Anime', itemCount: 2, icon: '/icons/anime.png' },
+  { _id: 'vegetables', id: 'vegetables', name: 'Vegetables', itemCount: 8, icon: '🥕' },
+  { _id: 'fruits', id: 'fruits', name: 'Fruits', itemCount: 10, icon: '🍓' },
+  { _id: 'aquatic-animals', id: 'aquatic-animals', name: 'Aquatic Animals', itemCount: 7, icon: '🐙' },
+  { _id: 'wild-animals', id: 'wild-animals', name: 'Wild Animals', itemCount: 9, icon: '🦊' },
+  { _id: 'domestic-animals', id: 'domestic-animals', name: 'Domestic Animals', itemCount: 8, icon: '🐱' },
+  { _id: 'flowers', id: 'flowers', name: 'Flowers & Plants', itemCount: 9, icon: '🌸' },
+  { _id: 'insects', id: 'insects', name: 'Insects', itemCount: 6, icon: '🐝' },
+  { _id: 'fantasy', id: 'fantasy', name: 'Fantasy & Mythical', itemCount: 7, icon: '🦄' },
+];
+
+const DEFAULT_PRODUCT_TYPES = [
+  { id: 'keychains', name: 'Keychains', count: 14 },
+  { id: 'dolls', name: 'Dolls & Figurines', count: 12 },
+  { id: 'wall-hanging', name: 'Car & Wall Hanging', count: 10 },
+  { id: 'bag-charms', name: 'Bag Charms', count: 8 },
+  { id: 'hair-bands', name: 'Hair Bands', count: 8 },
+  { id: 'pencil-toppers', name: 'Pencil Toppers', count: 6 },
+  { id: 'flower-pots', name: 'Flower Pots & Bouquets', count: 9 },
+  { id: 'coasters', name: 'Mats & Coasters', count: 6 },
+];
+
 export const Header: React.FC = () => {
   const { cartCount, user, logout } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,6 +61,8 @@ export const Header: React.FC = () => {
   const [themes, setThemes] = useState<CatalogTheme[]>([]);
   const [autocompleteResults, setAutocompleteResults] = useState<AutocompleteItem[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -53,6 +78,16 @@ export const Header: React.FC = () => {
   useEffect(() => {
     void fetchThemes();
   }, [fetchThemes]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -77,11 +112,20 @@ export const Header: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSearchOpen(false);
     setShowAutocomplete(false);
     if (searchQuery.trim()) {
       router.push(`/collections?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  const allThemes = themes.length > 0 ? themes : DEFAULT_THEMES;
+  const filteredThemes = allThemes.filter((t) =>
+    t.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
+  );
+  const filteredTypes = DEFAULT_PRODUCT_TYPES.filter((t) =>
+    t.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
+  );
 
 
   return (
@@ -204,42 +248,161 @@ export const Header: React.FC = () => {
 
         </nav>
 
-        {/* Search Bar */}
-        <div className="hidden md:flex items-center flex-1 max-w-sm relative mx-2">
+        {/* Search Bar with Category Design Theme */}
+        <div ref={searchRef} data-search-rounded className="hidden md:flex items-center flex-1 max-w-sm relative mx-2">
           <form onSubmit={handleSearchSubmit} className="w-full relative">
-            <input
-              type="text"
-              placeholder="Search yarn dolls, veggies, animals..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setShowAutocomplete(autocompleteResults.length > 0)}
-              className="w-full bg-peach-50/80 dark:bg-warmbrown-900/90 hover:bg-peach-50 border border-peach-200 dark:border-warmbrown-800 focus:border-warmbrown-500 dark:focus:border-warmbrown-600 rounded-full py-2 pl-4 pr-10 text-xs text-warmbrown-800 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 outline-none transition-all"
-            />
-            <button
-              type="submit"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-warmbrown-600 dark:bg-warmbrown-700 hover:bg-warmbrown-700 text-white p-1.5 rounded-full transition-colors"
-            >
-              <Search size={14} />
-            </button>
+            <div className="relative flex items-center">
+              <Search
+                size={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-warmbrown-400 dark:text-peach-300/50 pointer-events-none stroke-[2]"
+              />
+              <input
+                type="text"
+                placeholder="Search categories, themes..."
+                value={searchQuery}
+                onFocus={() => setIsSearchOpen(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsSearchOpen(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setIsSearchOpen(false);
+                }}
+                data-search-box
+                className="search-box w-full bg-peach-50/70 dark:bg-warmbrown-900/60 hover:bg-peach-50/90 border border-peach-200 dark:border-warmbrown-800 focus:border-warmbrown-600 dark:focus:border-peach-300 focus:bg-white dark:focus:bg-warmbrown-950 rounded-2xl py-2 pl-9 pr-8 text-xs sm:text-sm text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-peach-300/40 outline-none transition-all shadow-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-warmbrown-400 hover:text-warmbrown-700 dark:text-peach-300/50 dark:hover:text-peach-100 p-0.5 rounded-full"
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
           </form>
 
-          {/* Autocomplete Popup */}
-          {showAutocomplete && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1F1610] rounded-2xl border border-peach-200 dark:border-warmbrown-800 shadow-xl p-2 z-50 max-h-72 overflow-y-auto space-y-1">
-              {autocompleteResults.map((item) => (
-                <Link
-                  key={item.slug}
-                  href={`/products/${item.slug}`}
-                  onClick={() => setShowAutocomplete(false)}
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-peach-50 dark:hover:bg-warmbrown-900 text-xs transition-colors"
-                >
+          {/* Category-Driven Search Popover Menu */}
+          {isSearchOpen && (
+            <div
+              data-search-popover
+              className="search-popover absolute top-full left-0 right-0 mt-2 min-w-[340px] bg-white dark:bg-[#1A120B] rounded-2xl border border-peach-200/90 dark:border-warmbrown-800/90 shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 overflow-hidden"
+            >
+              {/* All Categories Row */}
+              <Link
+                href="/collections"
+                onClick={() => setIsSearchOpen(false)}
+                data-search-option
+                className="search-option-item flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-sm text-warmbrown-900 dark:text-peach-100 hover:bg-peach-100/70 dark:hover:bg-warmbrown-900 transition-colors group"
+              >
+                <span>All Categories</span>
+                <span className="text-xs font-semibold text-warmbrown-400 dark:text-peach-300/60 font-mono group-hover:text-warmbrown-700 dark:group-hover:text-peach-200">
+                  163
+                </span>
+              </Link>
+
+              <div className="max-h-[340px] overflow-y-auto overscroll-contain pr-1 space-y-3 mt-1 scrollbar-hover-only">
+                {/* Section: DESIGN THEMES */}
+                {filteredThemes.length > 0 && (
                   <div>
-                    <span className="font-bold text-warmbrown-800 dark:text-peach-100 block">{item.name}</span>
-                    <span className="text-[10px] text-warmbrown-500 dark:text-peach-300/60">{item.productType} • {item.designTheme}</span>
+                    <div className="px-3.5 pt-2 pb-1 text-[11px] font-black uppercase tracking-wider text-warmbrown-400 dark:text-peach-300/60 font-mono">
+                      DESIGN THEMES
+                    </div>
+                    <div className="space-y-0.5">
+                      {filteredThemes.map((theme) => (
+                        <Link
+                          key={theme._id || theme.id}
+                          href={`/collections?category=${encodeURIComponent(theme.name)}`}
+                          onClick={() => setIsSearchOpen(false)}
+                          data-search-option
+                          className="search-option-item flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-medium text-warmbrown-800 dark:text-peach-200 hover:bg-peach-100/90 dark:hover:bg-warmbrown-800 hover:text-warmbrown-950 dark:hover:text-peach-50 transition-colors group"
+                        >
+                          <span className="flex items-center gap-2">
+                            {theme.icon ? (
+                              theme.icon.startsWith('data:image') || theme.icon.startsWith('http') || theme.icon.startsWith('/') ? (
+                                <img src={theme.icon} alt={theme.name} className="h-4 w-4 object-contain rounded shrink-0" />
+                              ) : (
+                                <span className="text-sm shrink-0 leading-none">{theme.icon}</span>
+                              )
+                            ) : null}
+                            <span>{theme.name}</span>
+                          </span>
+                          <span className="text-xs font-semibold text-warmbrown-400 dark:text-peach-300/60 font-mono group-hover:text-warmbrown-700 dark:group-hover:text-peach-200">
+                            {theme.itemCount}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                  <span className="font-extrabold text-warmbrown-800 dark:text-peach-100">₹{item.price.toFixed(2)}</span>
-                </Link>
-              ))}
+                )}
+
+                {/* Section: PRODUCT TYPES */}
+                {filteredTypes.length > 0 && (
+                  <div>
+                    <div className="px-3.5 pt-2 pb-1 text-[11px] font-black uppercase tracking-wider text-warmbrown-400 dark:text-peach-300/60 font-mono">
+                      PRODUCT TYPES
+                    </div>
+                    <div className="space-y-0.5">
+                      {filteredTypes.map((type) => (
+                        <Link
+                          key={type.id}
+                          href={`/collections?type=${encodeURIComponent(type.name)}`}
+                          onClick={() => setIsSearchOpen(false)}
+                          data-search-option
+                          className="search-option-item flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-medium text-warmbrown-800 dark:text-peach-200 hover:bg-peach-100/90 dark:hover:bg-warmbrown-800 hover:text-warmbrown-950 dark:hover:text-peach-50 transition-colors group"
+                        >
+                          <span>{type.name}</span>
+                          <span className="text-xs font-semibold text-warmbrown-400 dark:text-peach-300/60 font-mono group-hover:text-warmbrown-700 dark:group-hover:text-peach-200">
+                            {type.count}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Autocomplete Matching Dolls if searching */}
+                {searchQuery.trim().length >= 2 && autocompleteResults.length > 0 && (
+                  <div>
+                    <div className="px-3.5 pt-2 pb-1 text-[11px] font-black uppercase tracking-wider text-warmbrown-400 dark:text-peach-300/60 font-mono border-t border-peach-100 dark:border-warmbrown-800/80 mt-2">
+                      MATCHING DOLLS
+                    </div>
+                    <div className="space-y-0.5">
+                      {autocompleteResults.slice(0, 4).map((item) => (
+                        <Link
+                          key={item.slug}
+                          href={`/products/${item.slug}`}
+                          onClick={() => setIsSearchOpen(false)}
+                          className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs hover:bg-peach-100/80 dark:hover:bg-warmbrown-900 transition-colors"
+                        >
+                          <div>
+                            <span className="font-bold text-warmbrown-800 dark:text-peach-100 block">{item.name}</span>
+                            <span className="text-[10px] text-warmbrown-500 dark:text-peach-300/60">{item.designTheme}</span>
+                          </div>
+                          <span className="font-extrabold text-warmbrown-800 dark:text-peach-100">₹{item.price.toFixed(2)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {filteredThemes.length === 0 && filteredTypes.length === 0 && (
+                  <div className="py-6 text-center px-4">
+                    <p className="text-xs text-warmbrown-500 dark:text-peach-300/60">
+                      No categories matching &quot;{searchQuery}&quot;
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSearchSubmit}
+                      className="mt-2 text-xs font-bold text-warmbrown-800 dark:text-peach-200 underline hover:text-warmbrown-950"
+                    >
+                      Search all dolls for &quot;{searchQuery}&quot; &rarr;
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -322,19 +485,27 @@ export const Header: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-peach-200 px-4 py-4 space-y-4 shadow-lg animate-in slide-in-from-top duration-200">
           <form onSubmit={handleSearchSubmit} className="relative">
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-warmbrown-400 pointer-events-none stroke-[2]"
+            />
             <input
               type="text"
-              placeholder="Search yarn dolls..."
+              placeholder="Search categories, themes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-peach-50 border border-peach-200 rounded-full py-2 pl-4 pr-10 text-xs outline-none"
+              data-search-box
+              className="search-box w-full bg-peach-50/70 border border-peach-200 focus:border-warmbrown-600 rounded-2xl py-2.5 pl-9.5 pr-8 text-xs text-warmbrown-900 placeholder-warmbrown-400 outline-none transition-all shadow-xs"
             />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-warmbrown-600 text-white p-1.5 rounded-full"
-            >
-              <Search size={14} />
-            </button>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-warmbrown-400 hover:text-warmbrown-700"
+              >
+                <X size={13} />
+              </button>
+            )}
           </form>
 
           <nav className="flex flex-col space-y-2 text-sm font-semibold text-warmbrown-800">
