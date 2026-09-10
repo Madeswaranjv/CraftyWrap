@@ -14,6 +14,7 @@ import {
   X,
   ArrowRight,
 } from 'lucide-react';
+import { FlowButton } from '@/components/ui/flow-button';
 
 export default function LoginPage() {
   const { login, loginWithGoogle, user } = useCart();
@@ -207,12 +208,11 @@ export default function LoginPage() {
             </div>
 
             {/* Main Log In Button */}
-            <button
+            <FlowButton
               type="submit"
-              className="w-full bg-gradient-to-r from-warmbrown-800 to-warmbrown-700 hover:from-warmbrown-900 hover:to-warmbrown-800 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs tracking-wide cursor-pointer"
-            >
-              Log In
-            </button>
+              text="Log In"
+              className="w-full py-3.5 text-xs font-bold tracking-wide border-warmbrown-800/40 text-warmbrown-900 dark:text-peach-100 shadow-sm"
+            />
           </form>
 
           {/* Or Continue With Divider */}

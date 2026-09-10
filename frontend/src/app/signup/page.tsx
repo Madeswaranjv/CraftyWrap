@@ -15,6 +15,7 @@ import {
   User,
   Phone,
 } from 'lucide-react';
+import { FlowButton } from '@/components/ui/flow-button';
 
 export default function SignUpPage() {
   const { register, loginWithGoogle } = useCart();
@@ -319,13 +320,12 @@ export default function SignUpPage() {
             </div>
 
             {/* Main Sign Up Button */}
-            <button
+            <FlowButton
               type="submit"
               disabled={!agreed}
-              className="w-full bg-gradient-to-r from-warmbrown-800 to-warmbrown-700 hover:from-warmbrown-900 hover:to-warmbrown-800 disabled:from-warmbrown-400 disabled:to-warmbrown-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs tracking-wide cursor-pointer"
-            >
-              Create Account
-            </button>
+              text="Create Account"
+              className="w-full py-3.5 text-xs font-bold tracking-wide border-warmbrown-800/40 text-warmbrown-900 dark:text-peach-100 shadow-sm"
+            />
           </form>
 
           {/* Or Continue With Divider */}
