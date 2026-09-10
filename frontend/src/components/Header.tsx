@@ -20,6 +20,7 @@ import {
   LogOut,
   ShieldAlert,
 } from 'lucide-react';
+import { FlowButton } from '@/components/ui/flow-button';
 
 interface AutocompleteItem {
   slug: string;
@@ -110,22 +111,18 @@ export const Header: React.FC = () => {
 
         {/* Desktop Icon-Only Navbar */}
         <nav className="hidden lg:flex items-center gap-3 text-warmbrown-800 dark:text-peach-100">
-          {/* Home Icon */}
+          {/* Home Icon *          {/* Home Navigation Icon */}
           <Link
             href="/"
             title="Home"
-            className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs border group hover:-translate-y-0.5 active:scale-95 ${
-              pathname === '/'
-                ? 'bg-peach-200 border-peach-300 dark:bg-warmbrown-800 dark:border-warmbrown-700 shadow-xs'
-                : 'bg-peach-100/70 border-peach-200/60 dark:bg-warmbrown-900/80 dark:border-warmbrown-800/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 dark:hover:border-warmbrown-700 hover:shadow-sm'
-            }`}
+            className={`nav-icon-btn ${pathname === '/' ? 'nav-icon-active' : ''}`}
           >
             <Image
               src="/home-icon.svg"
               alt="Home"
               width={22}
               height={22}
-              className="object-contain dark:brightness-0 dark:invert group-hover:rotate-6 group-hover:scale-110 transition-transform duration-300"
+              className="object-contain"
             />
           </Link>
 
@@ -141,18 +138,14 @@ export const Header: React.FC = () => {
             <Link
               href="/collections"
               title="Collections"
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs border group hover:-translate-y-0.5 active:scale-95 ${
-                pathname.startsWith('/collections')
-                  ? 'bg-peach-200 border-peach-300 dark:bg-warmbrown-800 dark:border-warmbrown-700 shadow-xs'
-                  : 'bg-peach-100/70 border-peach-200/60 dark:bg-warmbrown-900/80 dark:border-warmbrown-800/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 dark:hover:border-warmbrown-700 hover:shadow-sm'
-              }`}
+              className={`nav-icon-btn ${pathname.startsWith('/collections') ? 'nav-icon-active' : ''}`}
             >
               <Image
                 src="/collections-icon.svg"
                 alt="Collections"
                 width={22}
                 height={22}
-                className="object-contain dark:brightness-0 dark:invert group-hover:-rotate-6 group-hover:scale-110 transition-transform duration-300"
+                className="object-contain"
               />
             </Link>
 
@@ -198,18 +191,14 @@ export const Header: React.FC = () => {
           <Link
             href="/custom-order"
             title="Custom Order Request"
-            className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs border group hover:-translate-y-0.5 active:scale-95 ${
-              pathname === '/custom-order'
-                ? 'bg-peach-200 border-peach-300 dark:bg-warmbrown-800 dark:border-warmbrown-700 shadow-xs'
-                : 'bg-peach-100/70 border-peach-200/60 dark:bg-warmbrown-900/80 dark:border-warmbrown-800/80 hover:bg-peach-200/90 dark:hover:bg-warmbrown-800 dark:hover:border-warmbrown-700 hover:shadow-sm'
-            }`}
+            className={`nav-icon-btn ${pathname === '/custom-order' ? 'nav-icon-active' : ''}`}
           >
             <Image
               src="/custom-icon.svg"
               alt="Custom Orders"
               width={22}
               height={22}
-              className="object-contain dark:brightness-0 dark:invert group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300"
+              className="object-contain"
             />
           </Link>
 
@@ -289,18 +278,14 @@ export const Header: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5">
-              <Link
-                href="/login"
-                className="text-xs font-bold text-warmbrown-800 dark:text-peach-100 hover:text-warmbrown-600 dark:hover:text-peach-300 px-3 py-1.5 rounded-full hover:bg-peach-50 dark:hover:bg-warmbrown-900 transition-colors"
-              >
-                Log In
-              </Link>
-              <Link
-                href="/signup"
-                className="hidden sm:inline-block bg-warmbrown-800 dark:bg-warmbrown-700 hover:bg-warmbrown-900 text-peach-50 text-xs font-bold px-3.5 py-1.5 rounded-full shadow-xs transition-transform hover:scale-105 border border-peach-200 dark:border-warmbrown-800"
-              >
-                Sign Up
+            <div className="flex items-center">
+              <Link href="/login" tabIndex={-1} title="Sign in to your account">
+                <FlowButton
+                  type="button"
+                  variant="outline"
+                  text="Log In"
+                  className="min-w-[125px] sm:min-w-[135px] px-6 py-2 text-xs font-bold border-warmbrown-700/40 text-warmbrown-800 dark:text-peach-100 shadow-xs"
+                />
               </Link>
             </div>
           )}
@@ -309,11 +294,11 @@ export const Header: React.FC = () => {
           <Link
             href="/cart"
             title="View Shopping Cart"
-            className="w-9 h-9 sm:w-10 sm:h-10 bg-warmbrown-800 dark:bg-warmbrown-700 hover:bg-warmbrown-900 dark:hover:bg-warmbrown-600 text-peach-50 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 relative shrink-0 border border-peach-200 dark:border-warmbrown-800"
+            className={`nav-icon-btn shrink-0 ${pathname === '/cart' ? 'nav-icon-active' : ''}`}
           >
             <ShoppingCart size={18} />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-peach-400 text-warmbrown-900 text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center animate-pulse shadow-xs">
+              <span className="absolute -top-1 -right-1 bg-warmbrown-800 text-white dark:bg-peach-300 dark:text-warmbrown-900 text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center transition-colors shadow-xs">
                 {cartCount}
               </span>
             )}

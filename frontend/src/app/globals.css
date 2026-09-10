@@ -49,9 +49,9 @@ html.dark h6 {
 html.dark ::-webkit-scrollbar-track {
   background: #1A120B;
 }
-*,
-*::before,
-*::after {
+*:not(.flow-btn, .flow-btn *, [data-flow-btn], [data-flow-btn] *, .nav-icon-btn, .nav-icon-btn *),
+*::before:not(.flow-btn, .flow-btn *, [data-flow-btn], [data-flow-btn] *, .nav-icon-btn, .nav-icon-btn *),
+*::after:not(.flow-btn, .flow-btn *, [data-flow-btn], [data-flow-btn] *, .nav-icon-btn, .nav-icon-btn *) {
   border-radius: 0 !important;
 }
 
@@ -157,5 +157,249 @@ html.dark .animate-skeleton-shimmer {
     rgba(255, 255, 255, 0) 100%
   );
 }
+
+/* ==========================================================================
+   Real Flow Button Styles & Animations
+   ========================================================================== */
+.flow-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  overflow: hidden;
+  border-radius: 100px !important;
+  border: 1.5px solid rgba(51, 51, 51, 0.4);
+  background: transparent;
+  padding: 0.65rem 1.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111111;
+  cursor: pointer;
+  transition: all 600ms cubic-bezier(0.23, 1, 0.32, 1);
+  isolation: isolate;
+}
+
+html.dark .flow-btn {
+  border-color: rgba(246, 217, 188, 0.4);
+  color: #FDF0E6;
+}
+
+.flow-btn:hover {
+  border-color: transparent !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+}
+
+.flow-btn:active {
+  transform: scale(0.95);
+}
+
+/* Left sliding arrow */
+.flow-btn .flow-arr-left {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  left: -25%;
+  stroke: #111111;
+  fill: none;
+  z-index: 9;
+  transition: all 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html.dark .flow-btn .flow-arr-left {
+  stroke: #FDF0E6;
+}
+
+.flow-btn:hover .flow-arr-left {
+  left: 1rem;
+  stroke: #ffffff;
+}
+
+/* Text */
+.flow-btn .flow-text {
+  position: relative;
+  z-index: 1;
+  transform: translateX(-0.75rem);
+  transition: all 800ms ease-out;
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+}
+
+.flow-btn:hover .flow-text {
+  transform: translateX(0.75rem);
+  color: #ffffff !important;
+}
+
+/* Expanding circle */
+.flow-btn .flow-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1rem;
+  height: 1rem;
+  background-color: #111111;
+  border-radius: 50% !important;
+  opacity: 0;
+  z-index: 0;
+  transition: all 800ms cubic-bezier(0.19, 1, 0.22, 1);
+  pointer-events: none;
+}
+
+html.dark .flow-btn .flow-circle {
+  background-color: #3D2412;
+}
+
+.flow-btn:hover .flow-circle {
+  width: 800px;
+  height: 800px;
+  opacity: 1;
+}
+
+/* Right sliding arrow */
+.flow-btn .flow-arr-right {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  right: 1rem;
+  stroke: #111111;
+  fill: none;
+  z-index: 9;
+  transition: all 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html.dark .flow-btn .flow-arr-right {
+  stroke: #FDF0E6;
+}
+
+.flow-btn:hover .flow-arr-right {
+  right: -25%;
+  stroke: #ffffff;
+}
+
+/* Compact variant for header navbar buttons */
+.flow-btn-compact {
+  padding: 0.35rem 1.15rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+}
+
+.flow-btn-compact .flow-arr-left {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.flow-btn-compact .flow-arr-right {
+  width: 0.85rem;
+  height: 0.85rem;
+  right: 0.75rem;
+}
+
+.flow-btn-compact:hover .flow-arr-left {
+  left: 0.75rem;
+}
+
+.flow-btn-compact .flow-text {
+  transform: translateX(-0.45rem);
+}
+
+.flow-btn-compact:hover .flow-text {
+  transform: translateX(0.45rem);
+}
+
+/* Filled Crafty Theme Variant for Header 'Sign Up' */
+.flow-btn-filled {
+  background-color: #5C3A21 !important;
+  border-color: #5C3A21 !important;
+  color: #FFF9F4 !important;
+}
+
+.flow-btn-filled .flow-arr-left,
+.flow-btn-filled .flow-arr-right {
+  stroke: #FFF9F4 !important;
+}
+
+.flow-btn-filled .flow-circle {
+  background-color: #24140B !important;
+}
+
+/* ==========================================================================
+   Header Navigation Icons & Cart Icon Styles
+   ========================================================================== */
+.nav-icon-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 1rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(243, 203, 163, 0.6) !important;
+  background-color: rgba(253, 240, 230, 0.7) !important;
+  color: #5C3A21 !important;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+html.dark .nav-icon-btn {
+  border-color: rgba(61, 36, 18, 0.8) !important;
+  background-color: rgba(34, 23, 16, 0.8) !important;
+  color: #F6D9BC !important;
+}
+
+.nav-icon-btn.nav-icon-active {
+  background-color: #F6D9BC !important;
+  border-color: #F3CBA3 !important;
+}
+
+html.dark .nav-icon-btn.nav-icon-active {
+  background-color: #5C3A21 !important;
+  border-color: #6E4527 !important;
+}
+
+/* Hover: Background turns Brown, icon outline turns White */
+.nav-icon-btn:hover {
+  background-color: #5C3A21 !important;
+  border-color: #3D2412 !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px -2px rgba(92, 58, 33, 0.35);
+}
+
+html.dark .nav-icon-btn:hover {
+  background-color: #6E4527 !important;
+  border-color: #8A5A34 !important;
+}
+
+.nav-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* Icons inside: SVG images and Lucide SVG */
+.nav-icon-btn img {
+  object-fit: contain;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-icon-btn svg {
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  stroke: currentColor;
+}
+
+/* When hovered, turn image icons to pure white outline */
+.nav-icon-btn:hover img {
+  filter: brightness(0) invert(1) !important;
+}
+
+/* When hovered, turn svg icons to pure white outline */
+.nav-icon-btn:hover svg {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+}
+
+
 
 

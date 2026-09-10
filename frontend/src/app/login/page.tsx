@@ -112,18 +112,6 @@ export default function LoginPage() {
               </span>
             </div>
           </div>
-
-          {/* Decorative Bottom Bar Lines */}
-          <div className="z-10 space-y-2 pt-2">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full border-2 border-warmbrown-700 bg-peach-300" />
-              <div className="w-16 h-2 rounded-full bg-warmbrown-700/80" />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full border-2 border-warmbrown-700 bg-peach-300" />
-              <div className="w-24 h-2 rounded-full bg-warmbrown-700/80" />
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Login Form & Social Connections */}
