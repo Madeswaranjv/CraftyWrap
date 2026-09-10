@@ -18,7 +18,25 @@ const shippingAddressSchema = z.object({
 });
 export const checkoutSchema = z.object({ guestEmail: z.string().trim().email().optional(), shippingAddress: shippingAddressSchema, paymentMethod: z.enum(['razorpay']) });
 export const razorpayVerificationSchema = z.object({ razorpayPaymentId: z.string().min(1), razorpaySignature: z.string().min(1) });
-export const orderStatusSchema = z.object({ orderStatus: z.enum(['payment_pending', 'preparing', 'shipped', 'delivered', 'cancelled']).optional(), paymentStatus: z.enum(['paid', 'pending_verification', 'failed', 'refunded']).optional(), trackingNumber: z.string().trim().max(120).optional() });
+export const orderStatusSchema = z.object({
+  orderStatus: z.enum([
+    'payment_pending',
+    'received_by_crafter',
+    'preparing',
+    'packed',
+    'shipped',
+    'delivered',
+    'cancelled',
+  ]).optional(),
+  paymentStatus: z.enum(['paid', 'pending_verification', 'failed', 'refunded']).optional(),
+  trackingNumber: z.string().trim().max(120).optional().nullable(),
+  courierPartner: z.string().trim().max(120).optional().nullable(),
+  trackingUrl: z.string().trim().max(500).optional().nullable(),
+  prepDays: z.number().min(0).max(60).optional(),
+  packDays: z.number().min(0).max(60).optional(),
+  estimatedDeliveryDate: z.string().datetime().optional().nullable().or(z.string().optional().nullable()),
+  crafterAcceptedAt: z.string().datetime().optional().nullable().or(z.string().optional().nullable()),
+});
 
 export const checkout: RequestHandler = asyncHandler(async (req, res) => {
   const result = await createOrderFromCart({ ...req.body, owner: getCartOwner(req) });

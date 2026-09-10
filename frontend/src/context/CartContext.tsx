@@ -49,6 +49,12 @@ export interface Order {
   statusColor: string;
   shippingAddress: Address;
   trackingNumber?: string;
+  courierPartner?: string;
+  trackingUrl?: string;
+  prepDays?: number;
+  packDays?: number;
+  crafterAcceptedAt?: string;
+  estimatedDeliveryDate?: string;
 }
 
 interface AuthResponse {
@@ -130,6 +136,12 @@ function normalizeOrder(order: Record<string, unknown>): Order {
     statusColor: order.paymentStatus === 'pending_verification' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-emerald-100 text-emerald-900 border-emerald-300',
     shippingAddress: order.shippingAddress as Address,
     trackingNumber: order.trackingNumber as string | undefined,
+    courierPartner: order.courierPartner as string | undefined,
+    trackingUrl: order.trackingUrl as string | undefined,
+    prepDays: typeof order.prepDays === 'number' ? order.prepDays : undefined,
+    packDays: typeof order.packDays === 'number' ? order.packDays : undefined,
+    crafterAcceptedAt: order.crafterAcceptedAt ? String(order.crafterAcceptedAt) : undefined,
+    estimatedDeliveryDate: order.estimatedDeliveryDate ? String(order.estimatedDeliveryDate) : undefined,
   };
 }
 

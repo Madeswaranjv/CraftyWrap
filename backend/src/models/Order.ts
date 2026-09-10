@@ -3,7 +3,14 @@ import { addressSchema, IAddress, ObjectId } from './shared';
 
 export type PaymentMethod = 'razorpay';
 export type PaymentStatus = 'paid' | 'pending_verification' | 'failed' | 'refunded';
-export type OrderStatus = 'payment_pending' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus =
+  | 'payment_pending'
+  | 'received_by_crafter'
+  | 'preparing'
+  | 'packed'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled';
 
 export interface IOrderItem {
   product: ObjectId;
@@ -46,7 +53,13 @@ export interface IOrder {
   paymentStatus: PaymentStatus;
   paymentDetails?: IPaymentDetails;
   orderStatus: OrderStatus;
+  crafterAcceptedAt?: Date;
+  prepDays?: number;
+  packDays?: number;
+  courierPartner?: string;
   trackingNumber?: string;
+  trackingUrl?: string;
+  estimatedDeliveryDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -108,10 +121,16 @@ const orderSchema = new Schema<IOrder>(
     orderStatus: {
       type: String,
       required: true,
-      enum: ['payment_pending', 'preparing', 'shipped', 'delivered', 'cancelled'],
+      enum: ['payment_pending', 'received_by_crafter', 'preparing', 'packed', 'shipped', 'delivered', 'cancelled'],
       default: 'payment_pending',
     },
+    crafterAcceptedAt: { type: Date },
+    prepDays: { type: Number, default: 2 },
+    packDays: { type: Number, default: 1 },
+    courierPartner: { type: String, trim: true },
     trackingNumber: { type: String, trim: true },
+    trackingUrl: { type: String, trim: true },
+    estimatedDeliveryDate: { type: Date },
   },
   { timestamps: true },
 );

@@ -23,7 +23,16 @@ import {
   Check,
   X,
   ShieldAlert,
+  Calendar,
+  ExternalLink,
+  Sparkles,
 } from 'lucide-react';
+import TrackingTimeline from '@/components/ui/tracking-timeline';
+import {
+  buildOrderTimelineItems,
+  calculateEstimatedDeliveryDate,
+  formatExactDeliveryDay,
+} from '@/lib/orderTimeline';
 
 export default function AccountPage() {
   const { user, logout, orders, updateProfile, authLoading } = useCart();
@@ -234,133 +243,230 @@ export default function AccountPage() {
                         : 'border-peach-200 bg-peach-50/40 hover:border-warmbrown-400'
                     }`}
                   >
-                    {/* Header line with status badge */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-peach-100 pb-3 text-xs">
-                      <div>
-                        <span className="font-bold text-warmbrown-800 text-sm">#{order.orderNumber || order.id}</span>
-                        <span className="text-warmbrown-500 ml-2">Placed on {order.date}</span>
-                      </div>
+                    {(() => {
+                      const timelineItems = buildOrderTimelineItems(order);
+                      const estDeliveryDate = calculateEstimatedDeliveryDate(order);
+                      const exactDeliveryDayStr = formatExactDeliveryDay(estDeliveryDate);
+                      const isDelivered = order.orderStatus === 'delivered';
+                      const isShipped = order.orderStatus === 'shipped';
 
-                      {/* Distinct Status Badges */}
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold border text-[11px] self-start sm:self-auto ${order.statusColor}`}
-                      >
-                        {isPendingVerification ? (
-                          <>
-                            <Clock size={13} className="text-amber-700" />
-                            <span>Payment Pending Verification</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 size={13} className="text-emerald-700" />
-                            <span>{order.status}</span>
-                          </>
-                        )}
-                      </span>
-                    </div>
+                      return (
+                        <>
+                          {/* Header line with status badge */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-peach-100 pb-3 text-xs">
+                            <div>
+                              <span className="font-bold text-warmbrown-800 text-sm">#{order.orderNumber || order.id}</span>
+                              <span className="text-warmbrown-500 ml-2">Placed on {order.date}</span>
+                            </div>
 
-                    {/* Items Summary */}
-                    <div className="space-y-1.5 text-xs text-warmbrown-700">
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between">
-                          <span>
-                            {item.qty}x {item.name}
-                          </span>
-                          <span className="font-bold">₹{(item.price * item.qty).toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-peach-100 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-warmbrown-800">
-                          Total: ₹{order.total.toFixed(2)}
-                        </span>
-                        <span className="text-[10px] text-warmbrown-500">
-                          ({order.paymentMethod === 'razorpay' ? 'Razorpay' : 'UPI Manual'})
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={() =>
-                          setSelectedOrderDetails(
-                            selectedOrderDetails === order.id ? null : order.id
-                          )
-                        }
-                        className="text-warmbrown-700 hover:text-warmbrown-900 font-bold flex items-center gap-1 hover:underline"
-                      >
-                        <span>
-                          {selectedOrderDetails === order.id ? 'Hide Details' : 'View Details'}
-                        </span>
-                        <ChevronRight
-                          size={14}
-                          className={`transition-transform ${
-                            selectedOrderDetails === order.id ? 'rotate-90' : ''
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    {/* Expanded Details Panel */}
-                    {selectedOrderDetails === order.id && (
-                      <div className="bg-white p-4.5 rounded-2xl border border-peach-200 text-xs space-y-3 mt-2 animate-in fade-in duration-200">
-                        {isPendingVerification && (
-                          <div className="bg-amber-100/70 p-3 rounded-xl border border-amber-300 text-amber-900 space-y-1">
-                            <p className="font-bold flex items-center gap-1.5">
-                              <AlertTriangle size={14} className="text-amber-700" />
-                              UPI Payment Awaiting Manual Family Verification
-                            </p>
-                            <p className="text-[11px] text-amber-800">
-                              Please allow up to a few hours for CraftyWrap to verify your UPI transfer. Preparation starts immediately upon verification.
-                            </p>
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-warmbrown-700">
-                          <p>
-                            <strong>Payment Method:</strong>{' '}
-                            {order.paymentMethod === 'razorpay'
-                              ? 'Razorpay Online (Paid)'
-                              : 'UPI (craftywrap@upi)'}
-                          </p>
-                          <p>
-                            <strong>Payment Status:</strong>{' '}
+                            {/* Distinct Status Badges */}
                             <span
-                              className={
-                                isPendingVerification
-                                  ? 'text-amber-800 font-bold'
-                                  : 'text-emerald-700 font-bold'
-                              }
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold border text-[11px] self-start sm:self-auto ${order.statusColor}`}
                             >
-                              {isPendingVerification ? 'Pending Verification' : 'Verified Paid'}
+                              {isPendingVerification ? (
+                                <>
+                                  <Clock size={13} className="text-amber-700" />
+                                  <span>Payment Pending Verification</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 size={13} className="text-emerald-700" />
+                                  <span>{order.status}</span>
+                                </>
+                              )}
                             </span>
-                          </p>
-                          <p>
-                            <strong>Tracking Number:</strong> {order.trackingNumber || 'Pending'}
-                          </p>
-                          <p>
-                            <strong>Recipient:</strong> {order.shippingAddress.fullName} (
-                            {order.shippingAddress.city})
-                          </p>
-                        </div>
+                          </div>
 
-                        <p className="text-warmbrown-700 pt-1 border-t border-peach-100">
-                          <strong>Direct Support:</strong>{' '}
-                          <a
-                            href={`https://wa.me/919363515015?text=${encodeURIComponent(
-                              `Hi CraftyWrap! I am checking on Order #${order.id}`
-                            )}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1 ml-1"
-                          >
-                            <WhatsAppLogo size={14} className="text-emerald-600" />
-                            <span>Message us on WhatsApp (+91 93635 15015)</span>
-                          </a>{' '}
-                          with Order ID <strong>#{order.id}</strong>.
-                        </p>
-                      </div>
-                    )}
+                          {/* EXACT DELIVERY DAY BANNER */}
+                          <div className="bg-gradient-to-r from-peach-100/90 via-peach-50 to-peach-100/90 border border-peach-300/80 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-2xl bg-warmbrown-800 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                <Truck size={20} className="text-peach-200" />
+                              </div>
+                              <div>
+                                <div className="text-[10px] uppercase tracking-wider font-extrabold text-warmbrown-600">
+                                  {isDelivered ? 'Order Delivered On' : 'Expected Delivery Day'}
+                                </div>
+                                <div className="text-sm sm:text-base font-extrabold text-warmbrown-900 flex items-center gap-1.5">
+                                  <Calendar size={15} className="text-warmbrown-700 shrink-0" />
+                                  <span>{exactDeliveryDayStr}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {isShipped && (
+                                <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-300 inline-flex items-center gap-1 animate-pulse">
+                                  <Truck size={12} /> Out for Delivery
+                                </span>
+                              )}
+                              {isDelivered && (
+                                <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 inline-flex items-center gap-1">
+                                  <CheckCircle2 size={12} /> Delivered
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Items Summary */}
+                          <div className="space-y-1.5 text-xs text-warmbrown-700 pt-1">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="flex justify-between">
+                                <span>
+                                  {item.qty}x {item.name}
+                                </span>
+                                <span className="font-bold">₹{(item.price * item.qty).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-peach-100 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-warmbrown-800">
+                                Total: ₹{order.total.toFixed(2)}
+                              </span>
+                              <span className="text-[10px] text-warmbrown-500">
+                                ({order.paymentMethod === 'razorpay' ? 'Razorpay' : 'UPI Manual'})
+                              </span>
+                            </div>
+
+                            <button
+                              onClick={() =>
+                                setSelectedOrderDetails(
+                                  selectedOrderDetails === order.id ? null : order.id
+                                )
+                              }
+                              className="text-warmbrown-700 hover:text-warmbrown-900 font-bold flex items-center gap-1 hover:underline"
+                            >
+                              <span>
+                                {selectedOrderDetails === order.id ? 'Hide Details & Timeline' : 'View Details & Timeline'}
+                              </span>
+                              <ChevronRight
+                                size={14}
+                                className={`transition-transform ${
+                                  selectedOrderDetails === order.id ? 'rotate-90' : ''
+                                }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Expanded Details & Animated Tracking Timeline Panel */}
+                          {selectedOrderDetails === order.id && (
+                            <div className="bg-white p-5 rounded-2xl border border-peach-200 text-xs space-y-5 mt-3 animate-in fade-in duration-200 shadow-xs">
+                              {/* Animated Tracking Timeline Component */}
+                              <div className="bg-peach-50/50 rounded-2xl border border-peach-200/90 p-4 sm:p-5 space-y-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-peach-200/80 pb-3">
+                                  <h4 className="font-extrabold text-warmbrown-900 text-xs uppercase tracking-wider flex items-center gap-2">
+                                    <Sparkles size={14} className="text-amber-600" />
+                                    Handcrafted Order Journey
+                                  </h4>
+                                  <span className="text-[11px] text-warmbrown-600 font-medium">
+                                    Arriving: <strong className="text-warmbrown-900">{exactDeliveryDayStr}</strong>
+                                  </span>
+                                </div>
+
+                                <TrackingTimeline items={timelineItems} className="pt-2" />
+
+                                {/* Out for Delivery Real Tracking Information */}
+                                {order.trackingNumber ? (
+                                  <div className="mt-4 p-3.5 bg-white border border-peach-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                                    <div className="space-y-0.5">
+                                      <span className="text-[10px] font-bold text-warmbrown-500 uppercase tracking-wider block">
+                                        Courier Partner & Real Tracking
+                                      </span>
+                                      <p className="font-extrabold text-warmbrown-900 text-xs">
+                                        {order.courierPartner || 'Direct Courier'} • AWB: <span className="font-mono text-warmbrown-800">{order.trackingNumber}</span>
+                                      </p>
+                                    </div>
+                                    {order.trackingUrl ? (
+                                      <a
+                                        href={order.trackingUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="bg-warmbrown-800 hover:bg-warmbrown-900 text-white font-bold px-3.5 py-2 rounded-full text-xs flex items-center gap-1.5 shadow-xs transition-colors self-start sm:self-auto"
+                                      >
+                                        <span>Live Courier Tracking</span>
+                                        <ExternalLink size={12} />
+                                      </a>
+                                    ) : (
+                                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                                        Dispatched
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="text-[11px] text-warmbrown-600 bg-white/60 p-2.5 rounded-xl border border-peach-100 flex items-center gap-2">
+                                    <Clock size={13} className="text-warmbrown-500 shrink-0" />
+                                    <span>Real courier tracking number will appear as soon as the order is dispatched for delivery.</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {isPendingVerification && (
+                                <div className="bg-amber-100/70 p-3 rounded-xl border border-amber-300 text-amber-900 space-y-1">
+                                  <p className="font-bold flex items-center gap-1.5">
+                                    <AlertTriangle size={14} className="text-amber-700" />
+                                    UPI Payment Awaiting Manual Family Verification
+                                  </p>
+                                  <p className="text-[11px] text-amber-800">
+                                    Please allow up to a few hours for CraftyWrap to verify your UPI transfer. Preparation starts immediately upon verification.
+                                  </p>
+                                </div>
+                              )}
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-warmbrown-700 pt-2 border-t border-peach-100">
+                                <p>
+                                  <strong>Payment Method:</strong>{' '}
+                                  {order.paymentMethod === 'razorpay'
+                                    ? 'Razorpay Online (Paid)'
+                                    : 'UPI (craftywrap@upi)'}
+                                </p>
+                                <p>
+                                  <strong>Payment Status:</strong>{' '}
+                                  <span
+                                    className={
+                                      isPendingVerification
+                                        ? 'text-amber-800 font-bold'
+                                        : 'text-emerald-700 font-bold'
+                                    }
+                                  >
+                                    {isPendingVerification ? 'Pending Verification' : 'Verified Paid'}
+                                  </span>
+                                </p>
+                                <p>
+                                  <strong>Tracking Number:</strong>{' '}
+                                  {order.trackingNumber ? (
+                                    <span className="font-mono font-bold text-warmbrown-900">{order.trackingNumber}</span>
+                                  ) : (
+                                    'Pending Dispatch'
+                                  )}
+                                </p>
+                                <p>
+                                  <strong>Recipient:</strong> {order.shippingAddress.fullName} (
+                                  {order.shippingAddress.city})
+                                </p>
+                              </div>
+
+                              <p className="text-warmbrown-700 pt-2 border-t border-peach-100">
+                                <strong>Direct Support:</strong>{' '}
+                                <a
+                                  href={`https://wa.me/919363515015?text=${encodeURIComponent(
+                                    `Hi CraftyWrap! I am checking on Order #${order.id}`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1 ml-1"
+                                >
+                                  <WhatsAppLogo size={14} className="text-emerald-600" />
+                                  <span>Message us on WhatsApp (+91 93635 15015)</span>
+                                </a>{' '}
+                                with Order ID <strong>#{order.id}</strong>.
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 );
               })}

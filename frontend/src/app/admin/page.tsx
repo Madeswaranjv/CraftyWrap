@@ -32,7 +32,21 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronDown,
+  Truck,
+  Calendar,
+  CheckCheck,
+  Clock,
+  ExternalLink,
+  Scissors,
 } from 'lucide-react';
+import TrackingTimeline from '@/components/ui/tracking-timeline';
+import {
+  buildOrderTimelineItems,
+  calculateEstimatedDeliveryDate,
+  formatExactDeliveryDay,
+  formatTimelineDate,
+  addDays,
+} from '@/lib/orderTimeline';
 
 interface PromoCodeItem {
   _id: string;
@@ -73,13 +87,20 @@ interface OrderItem {
   paymentMethod: string;
   paymentStatus: string;
   orderStatus: string;
+  crafterAcceptedAt?: string;
+  prepDays?: number;
+  packDays?: number;
+  courierPartner?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  estimatedDeliveryDate?: string;
   paymentDetails?: {
     razorpayOrderId?: string;
     razorpayPaymentId?: string;
     paidAt?: string;
   };
   createdAt: string;
-  shippingAddress: { fullName: string; city: string };
+  shippingAddress: { fullName: string; city: string; address?: string; phone?: string; pincode?: string };
 }
 
 export interface ProductFormState {
@@ -316,6 +337,31 @@ export default function AdminDashboardPage() {
 
   const [newPromoCode, setNewPromoCode] = useState('');
   const [newPromoValue, setNewPromoValue] = useState(10);
+
+  // Order Timeline & Status Modal State
+  const [selectedOrderForTimeline, setSelectedOrderForTimeline] = useState<OrderItem | null>(null);
+  const [timelineForm, setTimelineForm] = useState<{
+    orderStatus: string;
+    paymentStatus: string;
+    crafterAcceptedAt: string;
+    prepDays: number;
+    packDays: number;
+    courierPartner: string;
+    trackingNumber: string;
+    trackingUrl: string;
+    estimatedDeliveryDate: string;
+  }>({
+    orderStatus: 'payment_pending',
+    paymentStatus: 'paid',
+    crafterAcceptedAt: '',
+    prepDays: 2,
+    packDays: 1,
+    courierPartner: 'DTDC Express',
+    trackingNumber: '',
+    trackingUrl: '',
+    estimatedDeliveryDate: '',
+  });
+  const [isSavingTimeline, setIsSavingTimeline] = useState(false);
 
   const token = getStoredAccessToken();
 
@@ -867,6 +913,88 @@ export default function AdminDashboardPage() {
       void loadData();
     } catch (err) {
       showNotification('error', err instanceof Error ? err.message : 'Failed to update order.');
+    }
+  };
+
+  const handleOpenTimelineModal = (order: OrderItem) => {
+    setSelectedOrderForTimeline(order);
+    setTimelineForm({
+      orderStatus: order.orderStatus || 'received_by_crafter',
+      paymentStatus: order.paymentStatus || 'paid',
+      crafterAcceptedAt: order.crafterAcceptedAt ? order.crafterAcceptedAt.slice(0, 16) : '',
+      prepDays: typeof order.prepDays === 'number' ? order.prepDays : 2,
+      packDays: typeof order.packDays === 'number' ? order.packDays : 1,
+      courierPartner: order.courierPartner || 'DTDC Express',
+      trackingNumber: order.trackingNumber || '',
+      trackingUrl: order.trackingUrl || '',
+      estimatedDeliveryDate: order.estimatedDeliveryDate ? order.estimatedDeliveryDate.slice(0, 10) : '',
+    });
+  };
+
+  const handleCrafterAcceptToggle = () => {
+    if (timelineForm.crafterAcceptedAt) {
+      setTimelineForm((prev) => ({
+        ...prev,
+        crafterAcceptedAt: '',
+      }));
+    } else {
+      const now = new Date();
+      setTimelineForm((prev) => ({
+        ...prev,
+        crafterAcceptedAt: now.toISOString().slice(0, 16),
+        orderStatus: prev.orderStatus === 'payment_pending' ? 'received_by_crafter' : prev.orderStatus,
+      }));
+    }
+  };
+
+  const handleQuickAcceptCrafter = async (order: OrderItem) => {
+    try {
+      const now = new Date().toISOString();
+      await apiRequest(`/orders/${order._id}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({
+          orderStatus: 'received_by_crafter',
+          crafterAcceptedAt: now,
+        }),
+      });
+      showNotification('success', `Order #${order.orderNumber || order._id.slice(-6)} marked as Received by Crafter (OK)!`);
+      void loadData();
+    } catch (err) {
+      showNotification('error', err instanceof Error ? err.message : 'Failed to accept order.');
+    }
+  };
+
+  const handleSaveOrderTimeline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrderForTimeline || !token) return;
+    setIsSavingTimeline(true);
+    try {
+      const payload: Record<string, any> = {
+        orderStatus: timelineForm.orderStatus,
+        paymentStatus: timelineForm.paymentStatus,
+        crafterAcceptedAt: timelineForm.crafterAcceptedAt ? new Date(timelineForm.crafterAcceptedAt).toISOString() : null,
+        prepDays: Number(timelineForm.prepDays),
+        packDays: Number(timelineForm.packDays),
+        courierPartner: timelineForm.courierPartner.trim() || undefined,
+        trackingNumber: timelineForm.trackingNumber.trim() || undefined,
+        trackingUrl: timelineForm.trackingUrl.trim() || undefined,
+        estimatedDeliveryDate: timelineForm.estimatedDeliveryDate ? new Date(timelineForm.estimatedDeliveryDate).toISOString() : null,
+      };
+
+      await apiRequest(`/orders/${selectedOrderForTimeline._id}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify(payload),
+      });
+
+      showNotification('success', `Order #${selectedOrderForTimeline.orderNumber || selectedOrderForTimeline._id.slice(-6)} timeline updated!`);
+      setSelectedOrderForTimeline(null);
+      void loadData();
+    } catch (err) {
+      showNotification('error', err instanceof Error ? err.message : 'Failed to update order timeline.');
+    } finally {
+      setIsSavingTimeline(false);
     }
   };
 
@@ -2129,6 +2257,450 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* MANAGE ORDER TIMELINE & STATUS MODAL */}
+      {selectedOrderForTimeline && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#1A120B] rounded-3xl border border-peach-200 dark:border-warmbrown-800 max-w-3xl w-full p-6 sm:p-7 space-y-6 shadow-2xl my-6 max-h-[92vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-peach-100 dark:border-warmbrown-900">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200">
+                    <Truck size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-warmbrown-900 dark:text-peach-100 text-base sm:text-lg">
+                      Manage Order Timeline & Status
+                    </h3>
+                    <p className="font-mono text-xs font-bold text-warmbrown-600 dark:text-peach-300">
+                      {selectedOrderForTimeline.orderNumber || `#${selectedOrderForTimeline._id}`} • Placed on {formatTimelineDate(selectedOrderForTimeline.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-warmbrown-600 dark:text-peach-300/80">
+                  Recipient: <strong className="text-warmbrown-900 dark:text-peach-100">{selectedOrderForTimeline.shippingAddress.fullName}</strong> ({selectedOrderForTimeline.shippingAddress.city}) • Total: <strong>₹{selectedOrderForTimeline.total.toFixed(2)}</strong>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedOrderForTimeline(null)}
+                className="text-warmbrown-500 hover:text-warmbrown-800 dark:text-peach-300 dark:hover:text-white p-1.5 rounded-full hover:bg-peach-100 dark:hover:bg-warmbrown-900 transition-colors shrink-0"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveOrderTimeline} className="space-y-6 text-xs">
+              {/* Top Row: Overall Order Status & Payment Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-peach-50/60 dark:bg-warmbrown-900/40 p-4 rounded-2xl border border-peach-200/80 dark:border-warmbrown-800">
+                <div>
+                  <label className="block font-bold text-warmbrown-800 dark:text-peach-200 mb-1">
+                    Current Order Status *
+                  </label>
+                  <select
+                    value={timelineForm.orderStatus}
+                    onChange={(e) => setTimelineForm({ ...timelineForm, orderStatus: e.target.value })}
+                    className="w-full bg-white dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none font-semibold cursor-pointer"
+                  >
+                    <option value="payment_pending">Payment Pending</option>
+                    <option value="received_by_crafter">1. Order Received By Crafter</option>
+                    <option value="preparing">2. Order Being Prepared</option>
+                    <option value="packed">3. Order Being Packed</option>
+                    <option value="shipped">4. Out for Delivery (In Transit)</option>
+                    <option value="delivered">5. Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-warmbrown-800 dark:text-peach-200 mb-1">
+                    Payment Status *
+                  </label>
+                  <select
+                    value={timelineForm.paymentStatus}
+                    onChange={(e) => setTimelineForm({ ...timelineForm, paymentStatus: e.target.value })}
+                    className="w-full bg-white dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none font-semibold cursor-pointer"
+                  >
+                    <option value="paid">Verified Paid</option>
+                    <option value="pending_verification">Pending Verification</option>
+                    <option value="failed">Failed</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* STEP 1: Crafter Acknowledgment */}
+              <div className="p-4 rounded-2xl border border-peach-200 dark:border-warmbrown-800 bg-white dark:bg-[#1F1610] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-warmbrown-800 text-white font-extrabold flex items-center justify-center text-[11px]">
+                      1
+                    </span>
+                    <h4 className="font-extrabold text-warmbrown-900 dark:text-peach-100 text-xs sm:text-sm">
+                      Order Received By Crafter (Crafter OK)
+                    </h4>
+                  </div>
+                  {timelineForm.crafterAcceptedAt ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                      <CheckCheck size={12} /> Crafter Accepted
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                      <Clock size={12} /> Awaiting Acceptance
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-warmbrown-600 dark:text-peach-300/80">
+                  Personally click OK to confirm that you have accepted this crochet commission and started materials allocation.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleCrafterAcceptToggle}
+                    className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-xs ${
+                      timelineForm.crafterAcceptedAt
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                        : 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
+                    }`}
+                  >
+                    {timelineForm.crafterAcceptedAt ? (
+                      <>
+                        <Check size={14} />
+                        <span>Accepted! Click to Revoke</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCheck size={14} />
+                        <span>👉 Click OK to Accept Order</span>
+                      </>
+                    )}
+                  </button>
+
+                  {timelineForm.crafterAcceptedAt && (
+                    <div className="flex items-center gap-2 text-[11px] text-warmbrown-700 dark:text-peach-300">
+                      <span>Accepted at:</span>
+                      <input
+                        type="datetime-local"
+                        value={timelineForm.crafterAcceptedAt}
+                        onChange={(e) => setTimelineForm({ ...timelineForm, crafterAcceptedAt: e.target.value })}
+                        className="bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 p-1 rounded-lg text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* STEP 2: Custom Preparation Days */}
+              <div className="p-4 rounded-2xl border border-peach-200 dark:border-warmbrown-800 bg-white dark:bg-[#1F1610] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-warmbrown-800 text-white font-extrabold flex items-center justify-center text-[11px]">
+                      2
+                    </span>
+                    <h4 className="font-extrabold text-warmbrown-900 dark:text-peach-100 text-xs sm:text-sm">
+                      Order Being Prepared (Custom Prep Days)
+                    </h4>
+                  </div>
+                  <span className="text-[11px] font-bold text-warmbrown-600 dark:text-peach-300 bg-peach-100 dark:bg-warmbrown-900 px-2 py-0.5 rounded-md">
+                    {timelineForm.prepDays} {timelineForm.prepDays === 1 ? 'Day' : 'Days'} Crafting
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-warmbrown-600 dark:text-peach-300/80">
+                  Set how many days you need to crochet and assemble this order. The ready date will be calculated automatically.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center pt-1">
+                  <div>
+                    <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">
+                      Prep Duration (Days)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        value={timelineForm.prepDays}
+                        onChange={(e) => setTimelineForm({ ...timelineForm, prepDays: Math.max(0, Number(e.target.value)) })}
+                        className="w-24 bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl font-bold text-center text-sm outline-none"
+                      />
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 5, 7].map((days) => (
+                          <button
+                            key={days}
+                            type="button"
+                            onClick={() => setTimelineForm({ ...timelineForm, prepDays: days })}
+                            className={`px-2.5 py-1.5 rounded-lg font-bold text-xs transition-colors border ${
+                              timelineForm.prepDays === days
+                                ? 'bg-warmbrown-800 text-white border-warmbrown-800'
+                                : 'bg-peach-50 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200 border-peach-200 dark:border-warmbrown-800 hover:bg-peach-100'
+                            }`}
+                          >
+                            {days}d
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-peach-50/70 dark:bg-warmbrown-900/60 rounded-xl border border-peach-200/60 dark:border-warmbrown-800 text-[11px] space-y-1">
+                    <span className="font-bold text-warmbrown-700 dark:text-peach-200 block">Calculated Ready Target:</span>
+                    <span className="font-extrabold text-warmbrown-900 dark:text-peach-100">
+                      {(() => {
+                        const base = timelineForm.crafterAcceptedAt ? new Date(timelineForm.crafterAcceptedAt) : new Date(selectedOrderForTimeline.createdAt);
+                        return formatTimelineDate(addDays(base, Number(timelineForm.prepDays)));
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* STEP 3: Custom Packaging Days */}
+              <div className="p-4 rounded-2xl border border-peach-200 dark:border-warmbrown-800 bg-white dark:bg-[#1F1610] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-warmbrown-800 text-white font-extrabold flex items-center justify-center text-[11px]">
+                      3
+                    </span>
+                    <h4 className="font-extrabold text-warmbrown-900 dark:text-peach-100 text-xs sm:text-sm">
+                      Order Being Packed (Custom Packaging Days)
+                    </h4>
+                  </div>
+                  <span className="text-[11px] font-bold text-warmbrown-600 dark:text-peach-300 bg-peach-100 dark:bg-warmbrown-900 px-2 py-0.5 rounded-md">
+                    {timelineForm.packDays} {timelineForm.packDays === 1 ? 'Day' : 'Days'} Packaging
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-warmbrown-600 dark:text-peach-300/80">
+                  Set how many days required for quality check, wrapping, gift notes, and box sealing.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center pt-1">
+                  <div>
+                    <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">
+                      Packing Duration (Days)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="30"
+                        value={timelineForm.packDays}
+                        onChange={(e) => setTimelineForm({ ...timelineForm, packDays: Math.max(0, Number(e.target.value)) })}
+                        className="w-24 bg-peach-50 dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl font-bold text-center text-sm outline-none"
+                      />
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3].map((days) => (
+                          <button
+                            key={days}
+                            type="button"
+                            onClick={() => setTimelineForm({ ...timelineForm, packDays: days })}
+                            className={`px-2.5 py-1.5 rounded-lg font-bold text-xs transition-colors border ${
+                              timelineForm.packDays === days
+                                ? 'bg-warmbrown-800 text-white border-warmbrown-800'
+                                : 'bg-peach-50 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200 border-peach-200 dark:border-warmbrown-800 hover:bg-peach-100'
+                            }`}
+                          >
+                            {days}d
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-peach-50/70 dark:bg-warmbrown-900/60 rounded-xl border border-peach-200/60 dark:border-warmbrown-800 text-[11px] space-y-1">
+                    <span className="font-bold text-warmbrown-700 dark:text-peach-200 block">Dispatch Ready Target:</span>
+                    <span className="font-extrabold text-warmbrown-900 dark:text-peach-100">
+                      {(() => {
+                        const base = timelineForm.crafterAcceptedAt ? new Date(timelineForm.crafterAcceptedAt) : new Date(selectedOrderForTimeline.createdAt);
+                        const prepDate = addDays(base, Number(timelineForm.prepDays));
+                        return formatTimelineDate(addDays(prepDate, Number(timelineForm.packDays)));
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* STEP 4: Out for Delivery (Real Tracking Order) */}
+              <div className="p-4 rounded-2xl border-2 border-warmbrown-600/60 dark:border-peach-400/40 bg-peach-50/30 dark:bg-warmbrown-900/40 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-warmbrown-800 text-white font-extrabold flex items-center justify-center text-[11px]">
+                      4
+                    </span>
+                    <h4 className="font-extrabold text-warmbrown-900 dark:text-peach-100 text-xs sm:text-sm flex items-center gap-1.5">
+                      <Truck size={16} className="text-warmbrown-700" />
+                      Out for Delivery (Real Tracking Order Details)
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-bold text-warmbrown-700 dark:text-peach-200 bg-peach-200/80 dark:bg-warmbrown-800 px-2 py-0.5 rounded-md uppercase">
+                    Courier Dispatch
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-warmbrown-600 dark:text-peach-300/80">
+                  Assign the actual courier partner, real tracking AWB number, live tracking link, and set the exact day the customer will receive their package.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">
+                      Courier Partner
+                    </label>
+                    <div className="space-y-1.5">
+                      <input
+                        type="text"
+                        placeholder="e.g. DTDC Express, Blue Dart, Delhivery"
+                        value={timelineForm.courierPartner}
+                        onChange={(e) => setTimelineForm({ ...timelineForm, courierPartner: e.target.value })}
+                        className="w-full bg-white dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none font-semibold"
+                      />
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {['DTDC Express', 'Blue Dart', 'Delhivery', 'India Post', 'Speed Post'].map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setTimelineForm({ ...timelineForm, courierPartner: c })}
+                            className="px-2 py-0.5 rounded bg-white dark:bg-warmbrown-800 border border-peach-200 dark:border-warmbrown-700 text-[10px] text-warmbrown-700 dark:text-peach-200 hover:bg-peach-100"
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">
+                      Real Tracking Number / AWB *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. DTDC-928174829"
+                      value={timelineForm.trackingNumber}
+                      onChange={(e) => setTimelineForm({ ...timelineForm, trackingNumber: e.target.value })}
+                      className="w-full bg-white dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none font-mono font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-warmbrown-700 dark:text-peach-200 mb-1">
+                      Live Courier Tracking URL (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://www.dtdc.in/tracking/shipment-tracking.asp"
+                      value={timelineForm.trackingUrl}
+                      onChange={(e) => setTimelineForm({ ...timelineForm, trackingUrl: e.target.value })}
+                      className="w-full bg-white dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold text-warmbrown-700 dark:text-peach-200">
+                        Exact Delivery Day For Customer *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = timelineForm.crafterAcceptedAt ? new Date(timelineForm.crafterAcceptedAt) : new Date(selectedOrderForTimeline.createdAt);
+                          const est = addDays(base, Number(timelineForm.prepDays) + Number(timelineForm.packDays) + 2);
+                          setTimelineForm({
+                            ...timelineForm,
+                            estimatedDeliveryDate: est.toISOString().slice(0, 10),
+                          });
+                        }}
+                        className="text-[10px] text-warmbrown-700 hover:text-warmbrown-900 underline font-bold"
+                      >
+                        Auto-Calculate
+                      </button>
+                    </div>
+                    <input
+                      type="date"
+                      value={timelineForm.estimatedDeliveryDate}
+                      onChange={(e) => setTimelineForm({ ...timelineForm, estimatedDeliveryDate: e.target.value })}
+                      className="w-full bg-white dark:bg-warmbrown-900 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 p-2.5 rounded-xl outline-none font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* LIVE CUSTOMER VIEW PREVIEW */}
+              <div className="p-4 rounded-2xl border border-peach-300 dark:border-warmbrown-800 bg-peach-50/40 dark:bg-warmbrown-950/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-warmbrown-900 dark:text-peach-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-amber-600" />
+                    Customer Live Preview (What Customer Sees in Order History)
+                  </h4>
+                  <span className="text-[10px] text-warmbrown-500 font-mono">Real-time sync</span>
+                </div>
+
+                {(() => {
+                  const previewInput: any = {
+                    createdAt: selectedOrderForTimeline.createdAt,
+                    orderStatus: timelineForm.orderStatus,
+                    paymentStatus: timelineForm.paymentStatus,
+                    crafterAcceptedAt: timelineForm.crafterAcceptedAt,
+                    prepDays: Number(timelineForm.prepDays),
+                    packDays: Number(timelineForm.packDays),
+                    courierPartner: timelineForm.courierPartner,
+                    trackingNumber: timelineForm.trackingNumber,
+                    trackingUrl: timelineForm.trackingUrl,
+                    estimatedDeliveryDate: timelineForm.estimatedDeliveryDate,
+                  };
+                  const previewItems = buildOrderTimelineItems(previewInput);
+                  const previewEstDelivery = calculateEstimatedDeliveryDate(previewInput);
+                  const previewExactDay = formatExactDeliveryDay(previewEstDelivery);
+
+                  return (
+                    <div className="bg-white dark:bg-[#1F1610] p-4 rounded-xl border border-peach-200 dark:border-warmbrown-800 space-y-4">
+                      <div className="bg-peach-100/80 dark:bg-warmbrown-900/80 p-3 rounded-xl border border-peach-300/80 dark:border-warmbrown-700 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <Truck size={18} className="text-warmbrown-800 dark:text-peach-200" />
+                          <div>
+                            <div className="text-[9px] uppercase tracking-wider font-extrabold text-warmbrown-600 dark:text-peach-400">Expected Delivery Day</div>
+                            <div className="text-xs font-black text-warmbrown-900 dark:text-peach-100">{previewExactDay}</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                          {timelineForm.orderStatus.replaceAll('_', ' ')}
+                        </span>
+                      </div>
+
+                      <TrackingTimeline items={previewItems} />
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Form Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-peach-100 dark:border-warmbrown-900">
+                <button
+                  type="button"
+                  disabled={isSavingTimeline}
+                  onClick={() => setSelectedOrderForTimeline(null)}
+                  className="bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200 px-5 py-2.5 rounded-full font-bold text-xs hover:bg-peach-200 dark:hover:bg-warmbrown-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingTimeline}
+                  className="bg-warmbrown-800 hover:bg-warmbrown-900 dark:bg-warmbrown-700 dark:hover:bg-warmbrown-600 text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-md transition-all disabled:opacity-50"
+                >
+                  {isSavingTimeline ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  <span>{isSavingTimeline ? 'Saving Timeline...' : 'Save Timeline & Order Status'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* TAB 2: DESIGN THEMES */}
       {activeTab === 'themes' && (
         <div className="space-y-6">
@@ -2277,48 +2849,163 @@ export default function AdminDashboardPage() {
 
       {/* TAB 5: ORDERS */}
       {activeTab === 'orders' && (
-        <div className="bg-white dark:bg-[#1F1610] rounded-3xl border border-peach-200 dark:border-warmbrown-900/80 overflow-hidden text-xs">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-peach-50 dark:bg-warmbrown-900 border-b border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 font-bold">
-                <th className="p-3">Order ID</th>
-                <th className="p-3">Customer</th>
-                <th className="p-3">Items</th>
-                <th className="p-3">Total</th>
-                <th className="p-3">Razorpay Details</th>
-                <th className="p-3">Payment Status</th>
-                <th className="p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-peach-100 dark:divide-warmbrown-900/60">
-              {orders.map((ord) => (
-                <tr key={ord._id} className="hover:bg-peach-50/50 dark:hover:bg-warmbrown-900/40">
-                  <td className="p-3 font-mono font-bold text-warmbrown-800 dark:text-peach-100">
-                    {ord.orderNumber || `#${ord._id.slice(-6)}`}
-                  </td>
-                  <td className="p-3">{ord.user?.name ?? ord.shippingAddress.fullName}</td>
-                  <td className="p-3">{ord.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')}</td>
-                  <td className="p-3 font-bold">₹{ord.total.toFixed(2)}</td>
-                  <td className="p-3 font-mono text-[11px] text-warmbrown-600 dark:text-peach-300">
-                    <div>Order: {ord.paymentDetails?.razorpayOrderId || 'N/A'}</div>
-                    <div>Pay: {ord.paymentDetails?.razorpayPaymentId || 'N/A'}</div>
-                  </td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${ord.paymentStatus === 'paid' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'}`}>
-                      {ord.paymentStatus}
-                    </span>
-                  </td>
-                  <td className="p-3 flex items-center gap-2">
-                    {ord.paymentStatus !== 'paid' && (
-                      <button onClick={() => void handleUpdateOrderStatus(ord._id, 'preparing', 'paid')} className="bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold">
-                        Verify Paid
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#1F1610] p-5 rounded-3xl border border-peach-200 dark:border-warmbrown-900/80 shadow-soft">
+            <div>
+              <h3 className="font-extrabold text-warmbrown-900 dark:text-peach-100 text-sm sm:text-base flex items-center gap-2">
+                <Truck size={18} className="text-warmbrown-700 dark:text-peach-300" />
+                Customer Orders & Live Delivery Journey
+              </h3>
+              <p className="text-xs text-warmbrown-600 dark:text-peach-300/70 pt-0.5">
+                Acknowledge orders (Crafter OK), customize preparation & packing days, set real courier tracking details, and establish the exact customer delivery date.
+              </p>
+            </div>
+            <div className="text-xs font-bold text-warmbrown-800 dark:text-peach-200 bg-peach-100 dark:bg-warmbrown-900 px-3.5 py-1.5 rounded-full border border-peach-200 dark:border-warmbrown-800 shrink-0 self-start sm:self-auto">
+              Total Orders: {orders.length}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-[#1F1610] rounded-3xl border border-peach-200 dark:border-warmbrown-900/80 overflow-hidden text-xs shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[920px]">
+                <thead>
+                  <tr className="bg-peach-50 dark:bg-warmbrown-900 border-b border-peach-200 dark:border-warmbrown-800 text-warmbrown-800 dark:text-peach-100 font-bold">
+                    <th className="p-3">Order Details</th>
+                    <th className="p-3">Customer</th>
+                    <th className="p-3">Items</th>
+                    <th className="p-3">Total & Payment</th>
+                    <th className="p-3">Crafter OK</th>
+                    <th className="p-3">Timeline Stage</th>
+                    <th className="p-3">Exact Delivery Day</th>
+                    <th className="p-3">Courier Tracking</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-peach-100 dark:divide-warmbrown-900/60">
+                  {orders.map((ord) => {
+                    const timelineOrderInput = {
+                      createdAt: ord.createdAt,
+                      orderStatus: ord.orderStatus,
+                      paymentStatus: ord.paymentStatus,
+                      crafterAcceptedAt: ord.crafterAcceptedAt,
+                      prepDays: ord.prepDays,
+                      packDays: ord.packDays,
+                      courierPartner: ord.courierPartner,
+                      trackingNumber: ord.trackingNumber,
+                      trackingUrl: ord.trackingUrl,
+                      estimatedDeliveryDate: ord.estimatedDeliveryDate,
+                    };
+                    const estDeliveryDate = calculateEstimatedDeliveryDate(timelineOrderInput);
+                    const exactDayStr = formatExactDeliveryDay(estDeliveryDate);
+                    const isAccepted = Boolean(ord.crafterAcceptedAt) || ['received_by_crafter', 'preparing', 'packed', 'shipped', 'delivered'].includes(ord.orderStatus);
+
+                    return (
+                      <tr key={ord._id} className="hover:bg-peach-50/50 dark:hover:bg-warmbrown-900/40 transition-colors">
+                        <td className="p-3">
+                          <div className="font-mono font-bold text-warmbrown-900 dark:text-peach-100">
+                            {ord.orderNumber || `#${ord._id.slice(-6)}`}
+                          </div>
+                          <div className="text-[10px] text-warmbrown-500 dark:text-peach-400">
+                            {formatTimelineDate(ord.createdAt)}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-bold text-warmbrown-900 dark:text-peach-100">
+                            {ord.user?.name ?? ord.shippingAddress.fullName}
+                          </div>
+                          <div className="text-[10px] text-warmbrown-500 dark:text-peach-400">
+                            {ord.shippingAddress.city}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="line-clamp-2 text-warmbrown-700 dark:text-peach-200">
+                            {ord.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-extrabold text-warmbrown-900 dark:text-peach-100">
+                            ₹{ord.total.toFixed(2)}
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] ${ord.paymentStatus === 'paid' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'}`}>
+                              {ord.paymentStatus}
+                            </span>
+                            <span className="text-[10px] text-warmbrown-500 capitalize">
+                              {ord.paymentMethod}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          {isAccepted ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                              <CheckCheck size={12} /> Crafter OK
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => void handleQuickAcceptCrafter(ord)}
+                              className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded-full text-[10px] transition-colors shadow-2xs"
+                              title="Click to personally accept and acknowledge this order"
+                            >
+                              👉 Crafter OK
+                            </button>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span className="px-2.5 py-1 rounded-full font-bold text-[10px] bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-800 dark:text-peach-200 border border-peach-200 dark:border-warmbrown-800 uppercase tracking-wider inline-block">
+                            {ord.orderStatus.replaceAll('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-extrabold text-warmbrown-900 dark:text-peach-100 text-[11px] flex items-center gap-1">
+                            <Calendar size={12} className="text-warmbrown-600 dark:text-peach-400 shrink-0" />
+                            <span>{exactDayStr.split(',')[0]}, {formatTimelineDate(estDeliveryDate)}</span>
+                          </div>
+                          <div className="text-[10px] text-warmbrown-500">
+                            Prep: {ord.prepDays ?? 2}d | Pack: {ord.packDays ?? 1}d
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          {ord.trackingNumber ? (
+                            <div className="space-y-0.5">
+                              <div className="font-mono font-bold text-warmbrown-900 dark:text-peach-100 text-[11px]">
+                                {ord.trackingNumber}
+                              </div>
+                              <div className="text-[10px] text-warmbrown-500">
+                                {ord.courierPartner || 'Courier Partner'}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-warmbrown-400 italic">
+                              Pending dispatch
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {ord.paymentStatus !== 'paid' && (
+                              <button
+                                onClick={() => void handleUpdateOrderStatus(ord._id, 'preparing', 'paid')}
+                                className="bg-emerald-700 hover:bg-emerald-800 text-white px-2 py-1 rounded-lg text-[10px] font-bold"
+                              >
+                                Paid
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenTimelineModal(ord)}
+                              className="bg-warmbrown-800 hover:bg-warmbrown-900 dark:bg-warmbrown-700 dark:hover:bg-warmbrown-600 text-white px-3 py-1.5 rounded-full font-bold text-[11px] inline-flex items-center gap-1 shadow-2xs transition-colors"
+                            >
+                              <Edit3 size={12} />
+                              <span>Edit Timeline</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
