@@ -38,7 +38,6 @@ function isOriginAllowed(origin: string): boolean {
   const normalized = origin.toLowerCase();
   if (normalized.includes('craftywrap.com')) return true;
   if (normalized.includes('.vercel.app')) return true;
-  if (normalized.includes('.onrender.com')) return true;
   if (normalized.startsWith('http://localhost:') || normalized.startsWith('http://127.0.0.1:')) return true;
   return false;
 }
