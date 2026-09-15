@@ -403,7 +403,15 @@ export default function ProductDetailPage() {
 
             {/* Secondary CTA: Customize this Doll */}
             <button
-              onClick={() => router.push(`/custom-order?ref=${encodeURIComponent(product.name)}`)}
+              onClick={() => {
+                const currentImg = imagesList[selectedImageIdx] || imagesList[0] || (product as any)?.imageUrl || '';
+                const queryParams = new URLSearchParams();
+                queryParams.set('ref', product.name);
+                if (currentImg) {
+                  queryParams.set('img', currentImg);
+                }
+                router.push(`/custom-order?${queryParams.toString()}`);
+              }}
               className="w-full bg-peach-100 hover:bg-peach-200 text-warmbrown-900 py-3 px-4 rounded-full font-bold text-xs border border-peach-300 transition-colors flex items-center justify-center gap-2"
             >
               <Wand2 size={15} className="text-peach-600" />
