@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import Link, { LinkProps } from "next/link";
 import React, { useState, createContext, useContext } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
@@ -92,7 +93,7 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        "h-full px-3 py-4 hidden md:flex md:flex-col bg-white dark:bg-[#1A120B] border border-peach-200/80 dark:border-warmbrown-900/80 rounded-2xl shadow-soft w-[280px] flex-shrink-0 transition-colors duration-200 overflow-hidden",
+        "h-full px-3 py-4 hidden lg:flex lg:flex-col bg-white dark:bg-[#1A120B] border border-peach-200/80 dark:border-warmbrown-900/80 rounded-2xl shadow-soft w-[280px] flex-shrink-0 transition-colors duration-200 overflow-hidden",
         className
       )}
       animate={{
@@ -113,50 +114,77 @@ export const MobileSidebar = ({
   ...props
 }: React.ComponentProps<"div">) => {
   const { open, setOpen } = useSidebar();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (open) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [open]);
+
   return (
-    <div
-      className={cn(
-        "h-12 px-4 py-2 flex flex-row md:hidden items-center justify-between bg-white dark:bg-[#1A120B] border border-peach-200/80 dark:border-warmbrown-900/80 rounded-xl shadow-xs w-full mb-4",
-        className
-      )}
-      {...props}
-    >
-      <div className="flex items-center gap-2 text-xs font-bold text-warmbrown-800 dark:text-peach-100">
-        <span>Categories & Themes</span>
-      </div>
-      <div className="flex justify-end z-20">
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className="p-1.5 rounded-lg text-warmbrown-800 dark:text-peach-200 hover:bg-peach-100 dark:hover:bg-warmbrown-900 transition-colors"
-          aria-label="Toggle Categories"
-        >
-          <Menu className="w-5 h-5 cursor-pointer" />
-        </button>
-      </div>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ x: "-100%", opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: "-100%", opacity: 0 }}
-            transition={{
-              duration: 0.28,
-              ease: "easeInOut",
-            }}
-            className="fixed h-full w-full inset-0 bg-white/95 dark:bg-[#1A120B]/95 backdrop-blur-md p-6 z-[100] flex flex-col justify-between overflow-y-auto"
-          >
-            <div
-              className="absolute right-6 top-6 z-50 text-warmbrown-800 dark:text-peach-200 p-2 rounded-xl hover:bg-peach-100 dark:hover:bg-warmbrown-900 cursor-pointer"
-              onClick={() => setOpen(!open)}
-            >
-              <X className="w-6 h-6" />
-            </div>
-            {children}
-          </motion.div>
+    <>
+      <div
+        className={cn(
+          "h-12 px-4 py-2 flex flex-row lg:hidden items-center justify-between bg-white dark:bg-[#1A120B] border border-peach-200/80 dark:border-warmbrown-900/80 rounded-xl shadow-xs w-full mb-4",
+          className
         )}
-      </AnimatePresence>
-    </div>
+        {...props}
+      >
+        <div className="flex items-center gap-2 text-xs font-bold text-warmbrown-800 dark:text-peach-100">
+          <span>Categories & Themes</span>
+        </div>
+        <div className="flex justify-end z-20">
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="p-1.5 rounded-lg text-warmbrown-800 dark:text-peach-200 hover:bg-peach-100 dark:hover:bg-warmbrown-900 transition-colors"
+            aria-label="Toggle Categories"
+          >
+            <Menu className="w-5 h-5 cursor-pointer" />
+          </button>
+        </div>
+      </div>
+
+      {mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 15 }}
+                transition={{
+                  duration: 0.2,
+                  ease: "easeInOut",
+                }}
+                className="fixed inset-0 h-full w-full bg-[#FFFDF9] dark:bg-[#140E0A] p-6 z-[99999] flex flex-col justify-between overflow-y-auto"
+              >
+                <div
+                  className="absolute right-5 top-5 z-50 text-warmbrown-800 dark:text-peach-200 p-2 rounded-xl bg-peach-100 hover:bg-peach-200 dark:bg-warmbrown-900 dark:hover:bg-warmbrown-800 cursor-pointer shadow-xs transition-colors"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </div>
+                <div className="pt-8 flex-1 flex flex-col justify-between">
+                  {children}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+    </>
   );
 };
 
@@ -169,7 +197,7 @@ export const SidebarLink = ({
   className?: string;
   props?: LinkProps;
 }) => {
-  const { open, animate } = useSidebar();
+  const { open, setOpen, animate } = useSidebar();
   
   const content = (
     <div
@@ -180,7 +208,10 @@ export const SidebarLink = ({
           : "text-warmbrown-800 dark:text-peach-200 hover:bg-peach-100/80 dark:hover:bg-warmbrown-900/80 hover:text-warmbrown-950 dark:hover:text-peach-50 font-medium",
         className
       )}
-      onClick={link.onClick}
+      onClick={() => {
+        if (link.onClick) link.onClick();
+        setOpen(false);
+      }}
     >
       <div className="flex items-center gap-3 shrink-0">
         <span className="w-5 h-5 flex items-center justify-center shrink-0">

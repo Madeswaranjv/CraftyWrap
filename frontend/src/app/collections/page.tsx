@@ -2,7 +2,8 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Search, LayoutGrid, Layers } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, LayoutGrid, Layers, X, Check, SlidersHorizontal } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Pagination } from '@/components/ui/pagination';
 import { ProductCard } from '@/components/ProductCard';
@@ -97,6 +98,30 @@ function CollectionsContent() {
   const [searchInput, setSearchInput] = useState(catalogParams.search);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobileCollectionsOpen, setIsMobileCollectionsOpen] = useState(false);
+  const [mobileThemeSearch, setMobileThemeSearch] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll when mobile collections overlay is open
+  useEffect(() => {
+    if (isMobileCollectionsOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isMobileCollectionsOpen]);
+
+  const filteredMobileThemes = useMemo(() => {
+    if (!mobileThemeSearch.trim()) return designThemesList;
+    const q = mobileThemeSearch.toLowerCase().trim();
+    return designThemesList.filter((t) => t.name.toLowerCase().includes(q));
+  }, [designThemesList, mobileThemeSearch]);
 
   const updateCatalogParams = useCallback((updates: Record<string, string | number | null | undefined>, replace = false) => {
     const nextParams = new URLSearchParams(activeQuery);
@@ -240,102 +265,406 @@ function CollectionsContent() {
   };
 
   return (
-    <div className="w-full px-2 sm:px-4 lg:px-6 py-6">
-      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-start">
-        {/* Left Animated Sidebar */}
-        <Sidebar open={isSidebarOpen} setOpen={setIsSidebarOpen}>
-          <SidebarBody className="justify-between gap-4 max-h-[calc(100vh-6rem)] sticky top-20">
-            <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden pr-1 scrollbar-hover-only">
-              <div className="flex items-center gap-2.5 px-2 py-2 mb-2 border-b border-peach-100 dark:border-warmbrown-900/60 pb-3">
-                <LayoutGrid className="w-5 h-5 text-warmbrown-700 dark:text-peach-300 shrink-0" />
-                {isSidebarOpen && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col"
-                  >
-                    <span className="font-extrabold text-sm text-warmbrown-900 dark:text-peach-100">
-                      Collections
-                    </span>
-                    <span className="text-[10px] text-warmbrown-500 dark:text-peach-300/60 uppercase tracking-widest font-mono">
-                      Design Themes
-                    </span>
-                  </motion.div>
-                )}
-              </div>
+    <div className="w-full px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Left Animated Sidebar (Desktop lg: and up) */}
+        <div className="hidden lg:block shrink-0">
+          <Sidebar open={isSidebarOpen} setOpen={setIsSidebarOpen}>
+            <SidebarBody className="justify-between gap-4 max-h-[calc(100vh-6rem)] sticky top-20">
+              <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden pr-1 scrollbar-hover-only">
+                <div className="flex items-center gap-2.5 px-2 py-2 mb-2 border-b border-peach-100 dark:border-warmbrown-900/60 pb-3">
+                  <LayoutGrid className="w-5 h-5 text-warmbrown-700 dark:text-peach-300 shrink-0" />
+                  {isSidebarOpen && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex flex-col"
+                    >
+                      <span className="font-extrabold text-sm text-warmbrown-900 dark:text-peach-100">
+                        Collections
+                      </span>
+                      <span className="text-[10px] text-warmbrown-500 dark:text-peach-300/60 uppercase tracking-widest font-mono">
+                        Design Themes
+                      </span>
+                    </motion.div>
+                  )}
+                </div>
 
-              <div className="flex flex-col gap-1">
-                {/* All Collections Link */}
-                {(() => {
-                  const isAllSelected = catalogParams.theme === 'All' && catalogParams.productType === 'All';
-                  return (
+                <div className="flex flex-col gap-1">
+                  {/* All Collections Link */}
+                  {(() => {
+                    const isAllSelected = catalogParams.theme === 'All' && catalogParams.productType === 'All';
+                    return (
+                      <SidebarLink
+                        link={{
+                          label: "All Collections",
+                          icon: (
+                            <Layers
+                              className={cn(
+                                "w-4 h-4 shrink-0 transition-colors",
+                                isAllSelected ? "text-white" : "text-warmbrown-800 dark:text-peach-100"
+                              )}
+                            />
+                          ),
+                          isActive: isAllSelected,
+                          count: pagination.total,
+                          onClick: () => updateCatalogParams({ theme: null, category: null, productType: null }),
+                        }}
+                      />
+                    );
+                  })()}
+
+                  {/* Themes List */}
+                  {designThemesList.map((theme) => (
                     <SidebarLink
+                      key={theme._id || theme.id}
                       link={{
-                        label: "All Collections",
+                        label: theme.name,
                         icon: (
-                          <Layers
-                            className={cn(
-                              "w-4 h-4 shrink-0 transition-colors",
-                              isAllSelected ? "text-white" : "text-warmbrown-800 dark:text-peach-100"
-                            )}
-                          />
+                          theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
+                            <img src={theme.icon} alt={theme.name} className="h-4 w-4 object-contain rounded shrink-0" />
+                          ) : (
+                            <span className="text-sm shrink-0 leading-none">{theme.icon || '🧶'}</span>
+                          )
                         ),
-                        isActive: isAllSelected,
-                        count: pagination.total,
-                        onClick: () => updateCatalogParams({ theme: null, category: null, productType: null }),
+                        isActive: catalogParams.theme === theme.name,
+                        count: theme.itemCount,
+                        onClick: () => updateCatalogParams({ theme: theme.name }),
                       }}
                     />
-                  );
-                })()}
-
-                {/* Themes List */}
-                {designThemesList.map((theme) => (
-                  <SidebarLink
-                    key={theme._id || theme.id}
-                    link={{
-                      label: theme.name,
-                      icon: (
-                        theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
-                          <img src={theme.icon} alt={theme.name} className="h-4 w-4 object-contain rounded shrink-0" />
-                        ) : (
-                          <span className="text-sm shrink-0 leading-none">{theme.icon || '🧶'}</span>
-                        )
-                      ),
-                      isActive: catalogParams.theme === theme.name,
-                      count: theme.itemCount,
-                      onClick: () => updateCatalogParams({ theme: theme.name }),
-                    }}
-                  />
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Bottom Info / Quick Reset */}
-            {hasActiveFilters && (
-              <div className="border-t border-peach-100 dark:border-warmbrown-900/60 pt-3 px-1">
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="w-full text-xs font-bold py-2 px-3 rounded-xl bg-peach-100/70 hover:bg-peach-200 text-warmbrown-800 dark:bg-warmbrown-900 dark:hover:bg-warmbrown-800 dark:text-peach-200 transition-colors text-center"
-                >
-                  Reset Filters
-                </button>
-              </div>
-            )}
-          </SidebarBody>
-        </Sidebar>
+              {/* Bottom Info / Quick Reset */}
+              {hasActiveFilters && (
+                <div className="border-t border-peach-100 dark:border-warmbrown-900/60 pt-3 px-1">
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="w-full text-xs font-bold py-2 px-3 rounded-xl bg-peach-100/70 hover:bg-peach-200 text-warmbrown-800 dark:bg-warmbrown-900 dark:hover:bg-warmbrown-800 dark:text-peach-200 transition-colors text-center"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              )}
+            </SidebarBody>
+          </Sidebar>
+        </div>
 
         {/* Right Main Content */}
-        <div className="flex-1 w-full min-w-0 space-y-6">
+        <div className="flex-1 w-full min-w-0 space-y-5 sm:space-y-6">
           {/* 1. Header Headline */}
           <div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-warmbrown-800 dark:text-peach-100 tracking-tight">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-warmbrown-800 dark:text-peach-100 tracking-tight">
               Our Collections
             </h1>
             <p className="text-xs sm:text-sm text-warmbrown-600 dark:text-peach-200/70 mt-1">
               Handmade yarn dolls, keychains, and plush accessories crafted with love.
             </p>
           </div>
+
+          {/* 2. Mobile & Tablet Horizontal Collections Tab Bar (< lg) */}
+          <div className="lg:hidden w-full space-y-2">
+            <div className="flex items-center justify-between px-0.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-warmbrown-700 dark:text-peach-200">
+                <LayoutGrid className="w-3.5 h-3.5 text-warmbrown-600 dark:text-peach-300 shrink-0" />
+                <span>Design Themes</span>
+                <span className="text-[11px] font-mono text-warmbrown-400 dark:text-peach-300/60 font-semibold">
+                  ({designThemesList.length})
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {catalogParams.theme !== 'All' && (
+                  <button
+                    type="button"
+                    onClick={() => updateCatalogParams({ theme: null, category: null })}
+                    className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline"
+                  >
+                    Clear Theme
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileCollectionsOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-peach-100 hover:bg-peach-200 text-warmbrown-800 dark:bg-warmbrown-900 dark:text-peach-200 dark:hover:bg-warmbrown-800 transition-colors shadow-xs"
+                >
+                  <SlidersHorizontal className="w-3 h-3" />
+                  <span>Browse All</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Touch-Friendly Horizontal Scrolling Strip */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-0.5 scrollbar-none -mx-3 px-3 sm:-mx-4 sm:px-4">
+              {/* All Collections Button */}
+              {(() => {
+                const isAllSelected = catalogParams.theme === 'All' && catalogParams.productType === 'All';
+                return (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isAllSelected) {
+                        setIsMobileCollectionsOpen(true);
+                      } else {
+                        updateCatalogParams({ theme: null, category: null, productType: null });
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs whitespace-nowrap shrink-0 transition-all active:scale-95 shadow-xs",
+                      isAllSelected
+                        ? "bg-warmbrown-800 text-peach-50 dark:bg-peach-400 dark:text-warmbrown-950 font-bold shadow-sm"
+                        : "bg-white dark:bg-[#1A120B] text-warmbrown-700 dark:text-peach-200 border border-peach-200/80 dark:border-warmbrown-800 hover:bg-peach-50 dark:hover:bg-warmbrown-900 font-medium"
+                    )}
+                  >
+                    <Layers className="w-3.5 h-3.5 shrink-0" />
+                    <span>All Collections</span>
+                    <span className={cn(
+                      "ml-1 text-[10px] font-mono font-semibold",
+                      isAllSelected ? "text-peach-200 dark:text-warmbrown-900" : "text-warmbrown-400 dark:text-peach-300/60"
+                    )}>
+                      ({pagination.total})
+                    </span>
+                  </button>
+                );
+              })()}
+
+              {/* Theme Pills */}
+              {designThemesList.map((theme) => {
+                const isSelected = catalogParams.theme === theme.name;
+                return (
+                  <button
+                    key={theme._id || theme.id}
+                    type="button"
+                    onClick={() => updateCatalogParams({ theme: theme.name })}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs whitespace-nowrap shrink-0 transition-all active:scale-95 shadow-xs",
+                      isSelected
+                        ? "bg-warmbrown-800 text-peach-50 dark:bg-peach-400 dark:text-warmbrown-950 font-bold shadow-sm"
+                        : "bg-white dark:bg-[#1A120B] text-warmbrown-700 dark:text-peach-200 border border-peach-200/80 dark:border-warmbrown-800 hover:bg-peach-50 dark:hover:bg-warmbrown-900 font-medium"
+                    )}
+                  >
+                    {theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
+                      <img src={theme.icon} alt={theme.name} className="h-3.5 w-3.5 object-contain rounded shrink-0" />
+                    ) : (
+                      <span className="text-xs shrink-0 leading-none">{theme.icon || '🧶'}</span>
+                    )}
+                    <span>{theme.name}</span>
+                    {theme.itemCount !== undefined && (
+                      <span className={cn(
+                        "ml-1 text-[10px] font-mono font-semibold",
+                        isSelected ? "text-peach-200 dark:text-warmbrown-900" : "text-warmbrown-400 dark:text-peach-300/60"
+                      )}>
+                        {theme.itemCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Full Screen Mobile Collections Overlay Drawer */}
+          {mounted && isMobileCollectionsOpen && typeof document !== 'undefined' && createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Collections and Design Themes"
+              className="fixed inset-0 z-[99999] flex flex-col bg-[#FFFDF9] dark:bg-[#140E0A] text-warmbrown-900 dark:text-peach-100 animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden"
+            >
+              {/* Overlay Top Header */}
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-peach-200/80 dark:border-warmbrown-800/80 bg-white/95 dark:bg-[#1A120B]/95 shrink-0 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-peach-100 dark:bg-warmbrown-900 flex items-center justify-center text-warmbrown-800 dark:text-peach-200 shadow-xs">
+                    <LayoutGrid className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-extrabold text-warmbrown-900 dark:text-peach-100 leading-tight">
+                      Collections & Themes
+                    </h2>
+                    <p className="text-[11px] text-warmbrown-500 dark:text-peach-300/70 font-medium">
+                      {designThemesList.length} design themes available
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileCollectionsOpen(false);
+                    setMobileThemeSearch('');
+                  }}
+                  aria-label="Close collections overlay"
+                  className="w-9 h-9 rounded-full bg-peach-100 hover:bg-peach-200 dark:bg-warmbrown-900 dark:hover:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-200 flex items-center justify-center transition-colors shadow-xs"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Search Inside Overlay */}
+              <div className="p-3 border-b border-peach-100 dark:border-warmbrown-900/60 bg-peach-50/50 dark:bg-[#1A120B]/40 shrink-0">
+                <div className="relative flex items-center">
+                  <Search className="w-4 h-4 absolute left-3 text-warmbrown-400 dark:text-peach-300/60 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={mobileThemeSearch}
+                    onChange={(e) => setMobileThemeSearch(e.target.value)}
+                    placeholder="Search collections (e.g. Anime, Vehicles)..."
+                    className="w-full bg-white dark:bg-[#140E0A] border border-peach-200 dark:border-warmbrown-800 rounded-xl py-2 pl-9 pr-8 text-xs text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-peach-300/40 outline-none focus:border-warmbrown-600 dark:focus:border-peach-300 transition-colors shadow-xs"
+                  />
+                  {mobileThemeSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setMobileThemeSearch('')}
+                      className="absolute right-2.5 text-warmbrown-400 hover:text-warmbrown-700 dark:hover:text-peach-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Scrollable Theme Items List */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-1.5 overscroll-contain">
+                {/* All Collections Option */}
+                {(() => {
+                  const isAllActive = catalogParams.theme === 'All' && catalogParams.productType === 'All';
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateCatalogParams({ theme: null, category: null, productType: null });
+                        setIsMobileCollectionsOpen(false);
+                        setMobileThemeSearch('');
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between p-3 rounded-xl text-left transition-all shadow-xs border",
+                        isAllActive
+                          ? "bg-warmbrown-800 text-peach-50 dark:bg-peach-400 dark:text-warmbrown-950 font-bold border-warmbrown-800 dark:border-peach-400 shadow-sm"
+                          : "bg-white dark:bg-[#1A120B] text-warmbrown-800 dark:text-peach-200 border-peach-200/80 dark:border-warmbrown-800/80 hover:bg-peach-50 dark:hover:bg-warmbrown-900 font-medium"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                          isAllActive ? "bg-warmbrown-700 text-white dark:bg-peach-300 dark:text-warmbrown-950" : "bg-peach-100 dark:bg-warmbrown-900 text-warmbrown-700 dark:text-peach-300"
+                        )}>
+                          <Layers className="w-4 h-4" />
+                        </span>
+                        <div>
+                          <div className="text-sm font-bold">All Collections</div>
+                          <div className={cn(
+                            "text-[11px]",
+                            isAllActive ? "text-peach-200 dark:text-warmbrown-900" : "text-warmbrown-400 dark:text-peach-300/60"
+                          )}>
+                            View all available products
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "text-xs font-mono font-semibold px-2 py-0.5 rounded-full",
+                          isAllActive ? "bg-warmbrown-700 dark:bg-peach-300/60 text-peach-100 dark:text-warmbrown-950" : "bg-peach-100/80 dark:bg-warmbrown-900 text-warmbrown-600 dark:text-peach-300"
+                        )}>
+                          {pagination.total}
+                        </span>
+                        {isAllActive && <Check className="w-4 h-4 text-peach-200 dark:text-warmbrown-950 shrink-0" />}
+                      </div>
+                    </button>
+                  );
+                })()}
+
+                {/* Filtered Themes List */}
+                {filteredMobileThemes.map((theme) => {
+                  const isSelected = catalogParams.theme === theme.name;
+                  return (
+                    <button
+                      key={theme._id || theme.id}
+                      type="button"
+                      onClick={() => {
+                        updateCatalogParams({ theme: theme.name });
+                        setIsMobileCollectionsOpen(false);
+                        setMobileThemeSearch('');
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between p-3 rounded-xl text-left transition-all shadow-xs border",
+                        isSelected
+                          ? "bg-warmbrown-800 text-peach-50 dark:bg-peach-400 dark:text-warmbrown-950 font-bold border-warmbrown-800 dark:border-peach-400 shadow-sm"
+                          : "bg-white dark:bg-[#1A120B] text-warmbrown-800 dark:text-peach-200 border-peach-200/80 dark:border-warmbrown-800/80 hover:bg-peach-50 dark:hover:bg-warmbrown-900 font-medium"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-base",
+                          isSelected ? "bg-warmbrown-700 dark:bg-peach-300" : "bg-peach-100 dark:bg-warmbrown-900"
+                        )}>
+                          {theme.icon?.startsWith('data:image') || theme.icon?.startsWith('http') || theme.icon?.startsWith('/') ? (
+                            <img src={theme.icon} alt={theme.name} className="h-5 w-5 object-contain rounded" />
+                          ) : (
+                            <span>{theme.icon || '🧶'}</span>
+                          )}
+                        </span>
+                        <span className="text-sm font-semibold">{theme.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {theme.itemCount !== undefined && (
+                          <span className={cn(
+                            "text-xs font-mono font-semibold px-2 py-0.5 rounded-full",
+                            isSelected ? "bg-warmbrown-700 dark:bg-peach-300/60 text-peach-100 dark:text-warmbrown-950" : "bg-peach-100/80 dark:bg-warmbrown-900 text-warmbrown-600 dark:text-peach-300"
+                          )}>
+                            {theme.itemCount}
+                          </span>
+                        )}
+                        {isSelected && <Check className="w-4 h-4 text-peach-200 dark:text-warmbrown-950 shrink-0" />}
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {filteredMobileThemes.length === 0 && (
+                  <div className="text-center py-12 px-4">
+                    <p className="text-sm text-warmbrown-500 dark:text-peach-300/70">
+                      No themes matching &ldquo;{mobileThemeSearch}&rdquo;
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setMobileThemeSearch('')}
+                      className="mt-2 text-xs font-bold text-warmbrown-800 dark:text-peach-200 underline"
+                    >
+                      Show all themes
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Bottom Actions Bar */}
+              <div className="p-3 border-t border-peach-200/80 dark:border-warmbrown-800/80 bg-white/95 dark:bg-[#1A120B]/95 flex items-center gap-2 shrink-0">
+                {catalogParams.theme !== 'All' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateCatalogParams({ theme: null, category: null });
+                      setIsMobileCollectionsOpen(false);
+                      setMobileThemeSearch('');
+                    }}
+                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-peach-100 hover:bg-peach-200 dark:bg-warmbrown-900 dark:hover:bg-warmbrown-800 text-warmbrown-800 dark:text-peach-200 transition-colors text-center border border-peach-200 dark:border-warmbrown-800"
+                  >
+                    Reset Theme
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileCollectionsOpen(false);
+                    setMobileThemeSearch('');
+                  }}
+                  className="flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold bg-warmbrown-800 hover:bg-warmbrown-900 dark:bg-peach-400 dark:hover:bg-peach-300 text-peach-50 dark:text-warmbrown-950 transition-colors text-center shadow-xs"
+                >
+                  View Products ({pagination.total})
+                </button>
+              </div>
+            </div>,
+            document.body
+          )}
 
           {/* 2. Top Filter Controls (3 Input Columns: Search, Price, Sort) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
