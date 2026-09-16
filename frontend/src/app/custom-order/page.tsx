@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { InstagramLogo, WhatsAppLogo } from '@/components/SocialIcons';
 import { CustomSelect } from '@/components/CustomSelect';
-import { Wand2, Upload, Send } from 'lucide-react';
+import { Upload, Send } from 'lucide-react';
 import { FlowButton } from '@/components/ui/flow-button';
 
 const YARN_OPTIONS = [
@@ -192,10 +192,6 @@ function CustomOrderContent() {
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-warmbrown-800 via-warmbrown-700 to-warmbrown-900 text-peach-50 p-8 sm:p-10 rounded-3xl shadow-xl border border-warmbrown-600 space-y-3 text-center relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-peach-300/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="inline-flex items-center gap-2 bg-peach-300/20 text-peach-200 px-3.5 py-1 rounded-full text-xs font-bold">
-          <Wand2 size={14} /> Custom Handmade Crochet Consultation
-        </div>
 
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white">
           Tell Us What You&apos;re Dreaming Of! 🧶

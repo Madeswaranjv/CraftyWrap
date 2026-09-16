@@ -93,11 +93,15 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        "h-full px-3 py-4 hidden lg:flex lg:flex-col bg-white dark:bg-[#1A120B] border border-peach-200/80 dark:border-warmbrown-900/80 rounded-2xl shadow-soft w-[280px] flex-shrink-0 transition-colors duration-200 overflow-hidden",
+        "h-full px-3 py-4 hidden lg:flex lg:flex-col bg-white dark:bg-[#1A120B] border border-peach-200/80 dark:border-warmbrown-900/80 rounded-2xl shadow-soft flex-shrink-0 transition-colors duration-200 overflow-hidden",
         className
       )}
       animate={{
         width: animate ? (open ? "280px" : "68px") : "280px",
+      }}
+      transition={{
+        duration: 0.3,
+        ease: [0.4, 0, 0.2, 1],
       }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
@@ -113,7 +117,7 @@ export const MobileSidebar = ({
   children,
   ...props
 }: React.ComponentProps<"div">) => {
-  const { open, setOpen } = useSidebar();
+  const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -167,7 +171,7 @@ export const MobileSidebar = ({
                   duration: 0.2,
                   ease: "easeInOut",
                 }}
-                className="fixed inset-0 h-full w-full bg-[#FFFDF9] dark:bg-[#140E0A] p-6 z-[99999] flex flex-col justify-between overflow-y-auto"
+                className="fixed inset-0 h-full w-full bg-[#FFFDF9] dark:bg-[#140E0A] p-6 z-[99999] flex flex-col justify-between overflow-y-auto lg:hidden"
               >
                 <div
                   className="absolute right-5 top-5 z-50 text-warmbrown-800 dark:text-peach-200 p-2 rounded-xl bg-peach-100 hover:bg-peach-200 dark:bg-warmbrown-900 dark:hover:bg-warmbrown-800 cursor-pointer shadow-xs transition-colors"
