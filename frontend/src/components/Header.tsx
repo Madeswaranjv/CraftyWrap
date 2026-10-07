@@ -129,12 +129,12 @@ export const Header: React.FC = () => {
 
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#1A120B]/95 backdrop-blur-md border-b border-peach-100 dark:border-warmbrown-900 transition-colors duration-300 shadow-sm">
+    <header className="sticky top-0 z-50 bg-peach-100 dark:bg-[#1F1610] transition-colors duration-300">
       {/* Main Navigation Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group shrink-0">
-          <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-peach-300 dark:border-warmbrown-700 shadow-sm group-hover:scale-105 transition-transform">
+          <div className="relative w-14 h-14 rounded-full overflow-hidden group-hover:scale-105 transition-transform">
             <Image
               src="/logo.png"
               alt="CraftyWrap Logo"
@@ -254,7 +254,7 @@ export const Header: React.FC = () => {
             <div className="relative flex items-center">
               <Search
                 size={15}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-warmbrown-400 dark:text-peach-300/50 pointer-events-none stroke-[2]"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-warmbrown-800 dark:text-warmbrown-800 pointer-events-none stroke-[2]"
               />
               <input
                 type="text"
@@ -269,7 +269,7 @@ export const Header: React.FC = () => {
                   if (e.key === 'Escape') setIsSearchOpen(false);
                 }}
                 data-search-box
-                className="search-box w-full bg-peach-50/70 dark:bg-warmbrown-900/60 hover:bg-peach-50/90 border border-peach-200 dark:border-warmbrown-800 focus:border-warmbrown-600 dark:focus:border-peach-300 focus:bg-white dark:focus:bg-warmbrown-950 rounded-2xl py-2 pl-9 pr-8 text-xs sm:text-sm text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-peach-300/40 outline-none transition-all shadow-xs"
+                className="search-box w-full bg-white dark:bg-white border border-peach-200 dark:border-peach-200 focus:border-warmbrown-600 dark:focus:border-warmbrown-600 focus:bg-white dark:focus:bg-white rounded-2xl py-2 pl-9 pr-8 text-xs sm:text-sm text-warmbrown-800 dark:text-warmbrown-800 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 outline-none transition-all shadow-xs"
               />
               {searchQuery && (
                 <button
@@ -447,7 +447,7 @@ export const Header: React.FC = () => {
                   type="button"
                   variant="outline"
                   text="Log In"
-                  className="min-w-[125px] sm:min-w-[135px] px-6 py-2 text-xs font-bold border-warmbrown-700/40 text-warmbrown-800 dark:text-peach-100 shadow-xs"
+                  className="min-w-[125px] sm:min-w-[135px] px-6 py-2 text-xs font-bold !border-white text-warmbrown-800 dark:text-warmbrown-800 !bg-white dark:!bg-white shadow-xs"
                 />
               </Link>
             </div>

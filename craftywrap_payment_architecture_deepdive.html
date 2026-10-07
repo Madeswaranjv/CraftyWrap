@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CraftyWrap - Razorpay & Payment Architecture Deep Dive</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 12mm 14mm 12mm;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #2D241E;
+      background-color: #FFFFFF;
+      font-size: 11pt;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Print & Page Break Rules */
+    .page-break {
+      page-break-before: always;
+    }
+
+    .no-break {
+      page-break-inside: avoid;
+    }
+
+    /* Header & Cover Banner */
+    .document-header {
+      background: linear-gradient(135deg, #4A2E18 0%, #6E4423 60%, #945D33 100%);
+      color: #FFFFFF;
+      padding: 32px 28px;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      position: relative;
+      box-shadow: 0 4px 14px rgba(74, 46, 24, 0.15);
+    }
+
+    .brand-tag {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #FFF2E8;
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+
+    .document-header h1 {
+      font-size: 24pt;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      margin-bottom: 8px;
+      color: #FFFFFF;
+    }
+
+    .document-header .subtitle {
+      font-size: 12pt;
+      color: #F7DBC8;
+      font-weight: 400;
+      max-width: 90%;
+      margin-bottom: 16px;
+    }
+
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 8.5pt;
+      color: #EBD3C2;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+      padding-top: 12px;
+    }
+
+    .meta-item strong {
+      color: #FFFFFF;
+    }
+
+    /* Typography & Hierarchy */
+    h2 {
+      font-size: 15pt;
+      font-weight: 700;
+      color: #4A2E18;
+      border-bottom: 2px solid #EAD8C7;
+      padding-bottom: 5px;
+      margin-top: 22px;
+      margin-bottom: 12px;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2 .section-num {
+      background: #4A2E18;
+      color: #FFFFFF;
+      font-size: 9.5pt;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    h3 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #6E4423;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin-bottom: 10px;
+      color: #3C3028;
+      text-align: justify;
+    }
+
+    strong {
+      color: #231A14;
+      font-weight: 600;
+    }
+
+    /* Callout & Alerts */
+    .callout {
+      background: #FDF9F5;
+      border-left: 4px solid #945D33;
+      padding: 12px 14px;
+      border-radius: 0 6px 6px 0;
+      margin: 12px 0;
+      font-size: 9.5pt;
+      color: #433227;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: #4A2E18;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10pt;
+    }
+
+    .callout-warning {
+      background: #FEF7EE;
+      border-left-color: #D97706;
+    }
+
+    .callout-warning .callout-title {
+      color: #B45309;
+    }
+
+    .callout-success {
+      background: #F0FDF4;
+      border-left-color: #16A34A;
+    }
+
+    .callout-success .callout-title {
+      color: #15803D;
+    }
+
+    /* Diagram / Flow Blocks */
+    .flow-container {
+      background: #FAF7F2;
+      border: 1px solid #E8DFD5;
+      border-radius: 8px;
+      padding: 14px;
+      margin: 14px 0;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .flow-step:last-child {
+      margin-bottom: 0;
+    }
+
+    .flow-badge {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #4A2E18;
+      color: #FFFFFF;
+      font-size: 9pt;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(74, 46, 24, 0.2);
+    }
+
+    .flow-content {
+      flex: 1;
+      font-size: 9.5pt;
+    }
+
+    .flow-title {
+      font-weight: 700;
+      color: #4A2E18;
+      margin-bottom: 2px;
+    }
+
+    .flow-desc {
+      color: #55453B;
+      line-height: 1.4;
+    }
+
+    /* Code Snippets */
+    pre {
+      background: #1E1A17;
+      color: #F3EBE3;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 8.5pt;
+      line-height: 1.45;
+      overflow-x: auto;
+      margin: 8px 0 12px 0;
+      border: 1px solid #382D24;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      background: #F3EBE3;
+      color: #5C3A21;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 8.5pt;
+      font-weight: 600;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      font-weight: normal;
+    }
+
+    .keyword { color: #F472B6; font-weight: 600; }
+    .fn { color: #60A5FA; }
+    .str { color: #34D399; }
+    .comment { color: #9CA3AF; font-style: italic; }
+    .num { color: #FBBF24; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px 0;
+      font-size: 9pt;
+    }
+
+    th, td {
+      padding: 7px 10px;
+      text-align: left;
+      vertical-align: top;
+      border: 1px solid #E8DFD5;
+    }
+
+    th {
+      background: #F3EBE3;
+      color: #4A2E18;
+      font-weight: 700;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    tr:nth-child(even) td {
+      background: #FAF7F4;
+    }
+
+    /* Two-column layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 10px 0;
+    }
+
+    .card {
+      background: #FAF7F2;
+      border: 1px solid #EAD8C7;
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 10pt;
+      color: #4A2E18;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card ul {
+      margin-left: 18px;
+      font-size: 9pt;
+      color: #4A3A2F;
+    }
+
+    .card li {
+      margin-bottom: 4px;
+    }
+
+    /* Footer / Page Numbering */
+    .doc-footer {
+      margin-top: 24px;
+      padding-top: 10px;
+      border-top: 1px solid #EAD8C7;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8pt;
+      color: #8C7869;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER BANNER -->
+  <div class="document-header">
+    <div class="brand-tag">CraftyWrap &bull; Engineering Whitepaper</div>
+    <h1>Payment Architecture & Razorpay Deep Dive</h1>
+    <div class="subtitle">Complete technical specification of checkout workflows, synchronous client validation, resilient webhook event processing, idempotency guarantees, and MongoDB ACID state consistency.</div>
+    <div class="meta-bar">
+      <div class="meta-item"><strong>Platform:</strong> CraftyWrap E-Commerce</div>
+      <div class="meta-item"><strong>Payment Gateway:</strong> Razorpay API v1 & Webhooks</div>
+      <div class="meta-item"><strong>Stack:</strong> Next.js &bull; Express &bull; Mongoose (Replica Sets)</div>
+      <div class="meta-item"><strong>Author:</strong> Lead Full-Stack Engineering Team</div>
+      <div class="meta-item"><strong>Classification:</strong> Internal Architecture & Interview Spec</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <h2><span class="section-num">01</span> Executive Architecture Summary</h2>
+  <p>
+    Payment backend design is the most critical and vulnerability-prone tier of an e-commerce platform. In <strong>CraftyWrap</strong>, checkout is architected as a <strong>hybrid dual-path verification model</strong>:
+  </p>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">1. Fast-Path Client Verification (UX)</div>
+      <ul>
+        <li>Triggered directly from the browser Razorpay SDK callback.</li>
+        <li>Validates <code>razorpay_payment_id</code> and <code>razorpay_signature</code> against <code>RAZORPAY_KEY_SECRET</code>.</li>
+        <li>Transitions the order status immediately, providing instant visual feedback and preventing user bounce.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">2. Asynchronous Webhook Engine (Truth)</div>
+      <ul>
+        <li>Direct, server-to-server HTTP POST emitted by Razorpay upon payment capture.</li>
+        <li>Operates independently of whether the user closes the tab, loses network, or suffers a browser crash.</li>
+        <li>Guarantees inventory deduction, promo usage, and financial fulfillment even in worst-case client dropouts.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-success">
+    <div class="callout-title">Core Engineering Principle: The Dual-Verification Invariant</div>
+    Both the client verification endpoint and the webhook pipeline converge onto an <strong>idempotent, atomic transaction</strong>. Regardless of whether the client or the webhook reaches the server first (or if both arrive simultaneously), stock is deducted <em>exactly once</em>, promo codes are recorded <em>exactly once</em>, and the order is marked <em>paid</em> safely.
+  </div>
+
+  <!-- SECTION 2 -->
+  <h2><span class="section-num">02</span> End-to-End Payment Flow Topology</h2>
+  <div class="flow-container">
+    <div class="flow-step">
+      <div class="flow-badge">1</div>
+      <div class="flow-content">
+        <div class="flow-title">Customer Submits Checkout Form (Client)</div>
+        <div class="flow-desc">The user inputs their shipping address and clicks "Pay". The Next.js frontend posts shipping information and cart ownership tokens to <code>POST /api/orders/checkout</code>.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-badge">2</div>
+      <div class="flow-content">
+        <div class="flow-title">Order Staging & Razorpay Order Inception (Backend)</div>
+        <div class="flow-desc">The backend sanitizes the cart, verifies live inventory stock, computes charges (Subtotal + ₹50 Shipping + ₹49 Gift Wrap &minus; Promo Discount), generates a sequential order number (<code>CW-2026-XXXXXX</code>), creates an order with <code>orderStatus: 'payment_pending'</code>, and invokes <code>razorpay.orders.create()</code>.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-badge">3</div>
+      <div class="flow-content">
+        <div class="flow-title">Razorpay Checkout Modal Invocation (Client SDK)</div>
+        <div class="flow-desc">Frontend dynamically mounts <code>https://checkout.razorpay.com/v1/checkout.js</code>. The SDK presents UPI (GPay, PhonePe), Cards, and Netbanking rails using CraftyWrap brand parameters (<code>#5C3A21</code>).</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-badge">4A</div>
+      <div class="flow-content">
+        <div class="flow-title">Synchronous Path: Client Signature Submission</div>
+        <div class="flow-desc">On payment authorization, Razorpay passes <code>razorpay_payment_id</code> and <code>razorpay_signature</code> to the SDK handler, which posts to <code>POST /api/orders/:orderId/verify-payment</code>.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-badge">4B</div>
+      <div class="flow-content">
+        <div class="flow-title">Asynchronous Path: Server-to-Server Webhook Delivery</div>
+        <div class="flow-desc">Razorpay fires <code>payment.captured</code> and <code>order.paid</code> directly to <code>POST /api/razorpay/webhook</code>. This occurs asynchronously in the background.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-badge">5</div>
+      <div class="flow-content">
+        <div class="flow-title">Atomic Fulfillment & Cart Invalidation</div>
+        <div class="flow-desc">MongoDB replica session executes: updates <code>paymentStatus = 'paid'</code>, transitions <code>orderStatus = 'preparing'</code>, decrements stock via <code>$inc: { stockCount: -quantity }</code>, and purges the active cart.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 3 -->
+  <h2><span class="section-num">03</span> Order Staging & Razorpay Orders API</h2>
+  <p>
+    When <code>createOrderFromCart</code> in <code>backend/src/services/orderService.ts</code> is invoked, it adheres to defensive financial rules before involving the payment gateway:
+  </p>
+  <ul>
+    <li><strong>Cart Sanitization:</strong> Any ghost items with zero quantity or inactive/deleted product IDs are purged automatically before price calculations.</li>
+    <li><strong>Live Stock Verification:</strong> Ensures every cart item's quantity does not exceed current <code>stockCount</code>. If insufficient, throws HTTP 409 Conflict.</li>
+    <li><strong>Financial Exactness:</strong> Currency conversion enforces the Razorpay paise rule (1 INR = 100 Paise). Amounts are converted using <code>Math.round(total * 100)</code> to eliminate floating point truncation issues.</li>
+    <li><strong>Atomic Sequential Numbering:</strong> Generates human-readable identifiers such as <code>CW-2026-000001</code> via a dedicated atomic MongoDB counter collection.</li>
+  </ul>
+
+  <div class="no-break">
+    <h3>Razorpay API Request Specification</h3>
+    <pre><code><span class="keyword">const</span> orderPayload = {
+  <span class="fn">amount</span>: Math.<span class="fn">round</span>(total * <span class="num">100</span>),   <span class="comment">// e.g., ₹1,499.00 -> 149900 paise</span>
+  <span class="fn">currency</span>: <span class="str">'INR'</span>,
+  <span class="fn">receipt</span>: orderNumber,               <span class="comment">// e.g., "CW-2026-000042"</span>
+  <span class="fn">notes</span>: { craftywrapOrderNumber: orderNumber },
+};
+<span class="keyword">const</span> razorpayOrder = <span class="keyword">await</span> razorpay.orders.<span class="fn">create</span>(orderPayload);
+createdOrder.paymentDetails = { razorpayOrderId: razorpayOrder.id };
+<span class="keyword">await</span> createdOrder.<span class="fn">save</span>();</code></pre>
+  </div>
+
+  <div class="callout callout-warning">
+    <div class="callout-title">Graceful Test/Demo Fallback</div>
+    If the backend detects that <code>RAZORPAY_KEY_ID</code> or <code>RAZORPAY_KEY_SECRET</code> is unconfigured (such as in local preview environments or isolated CI runs), it assigns a virtual demo order identifier (<code>order_demo_...</code>). The frontend detects this and opens an interactive modal simulator rather than failing, ensuring smooth development and testing.
+  </div>
+
+  <!-- SECTION 4 -->
+  <h2><span class="section-num">04</span> Client-Side Razorpay Integration (Checkout.js)</h2>
+  <p>
+    Rather than redirecting the user to an external checkout domain, CraftyWrap loads the script asynchronously via <code>loadRazorpayScript()</code> and opens the embedded Razorpay checkout modal.
+  </p>
+
+  <div class="no-break">
+    <pre><code><span class="keyword">const</span> razorpayOptions = {
+  <span class="fn">key</span>: rzpOrder.keyId,
+  <span class="fn">amount</span>: rzpOrder.amount,
+  <span class="fn">currency</span>: rzpOrder.currency,
+  <span class="fn">name</span>: <span class="str">'CraftyWrap'</span>,
+  <span class="fn">description</span>: <span class="str">`Order #${formattedOrder.orderNumber}`</span>,
+  <span class="fn">image</span>: <span class="str">'/logo.png'</span>,
+  <span class="fn">order_id</span>: rzpOrder.id,
+  <span class="fn">prefill</span>: { name: fullName, phone: phone },
+  <span class="fn">theme</span>: { color: <span class="str">'#5C3A21'</span> }, <span class="comment">// CraftyWrap signature warm brown</span>
+  <span class="fn">handler</span>: <span class="keyword">async function</span> (res) {
+    <span class="keyword">await</span> <span class="fn">apiRequest</span>(<span class="str">`/orders/${order.id}/verify-payment`</span>, {
+      method: <span class="str">'POST'</span>,
+      body: JSON.<span class="fn">stringify</span>({
+        razorpayPaymentId: res.razorpay_payment_id,
+        razorpaySignature: res.razorpay_signature,
+      }),
+    });
+  }
+};</code></pre>
+  </div>
+
+  <!-- SECTION 5 -->
+  <h2><span class="section-num">05</span> Synchronous Verification Logic</h2>
+  <p>
+    When the client posts to <code>POST /api/orders/:orderId/verify-payment</code>, <code>verifyRazorpayPayment</code> executes cryptographic verification:
+  </p>
+  <div class="no-break">
+    <pre><code><span class="comment">// 1. Generate expected HMAC-SHA256 signature</span>
+<span class="keyword">const</span> expectedSignature = crypto
+  .<span class="fn">createHmac</span>(<span class="str">'sha256'</span>, secret)
+  .<span class="fn">update</span>(<span class="str">`${razorpayOrderId}|${razorpayPaymentId}`</span>)
+  .<span class="fn">digest</span>(<span class="str">'hex'</span>);
+
+<span class="comment">// 2. Constant-time equality check to prevent timing attacks</span>
+<span class="keyword">const</span> expectedBuf = Buffer.<span class="fn">from</span>(expectedSignature);
+<span class="keyword">const</span> actualBuf = Buffer.<span class="fn">from</span>(razorpaySignature);
+
+<span class="keyword">if</span> (expectedBuf.length !== actualBuf.length || !crypto.<span class="fn">timingSafeEqual</span>(expectedBuf, actualBuf)) {
+  <span class="keyword">throw new</span> <span class="fn">HttpError</span>(<span class="num">400</span>, <span class="str">'Razorpay payment signature is invalid.'</span>);
+}</code></pre>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 6 -->
+  <h2><span class="section-num">06</span> Deep Dive: The Razorpay Webhook Engine</h2>
+  <p>
+    The webhook engine located in <code>backend/src/controllers/razorpayWebhookController.ts</code> and <code>backend/src/services/razorpayWebhookService.ts</code> is the most technically nuanced component of the payment pipeline.
+  </p>
+
+  <h3>1. Raw Body Capture via Express Middleware</h3>
+  <p>
+    HMAC verification fails if the payload has been parsed and re-serialized because key order, whitespace, or escape sequences might change. In <code>backend/src/app.ts</code>, CraftyWrap preserves the exact incoming binary buffer:
+  </p>
+  <pre><code>app.<span class="fn">use</span>(
+  express.<span class="fn">json</span>({
+    limit: <span class="str">'50mb'</span>,
+    <span class="fn">verify</span>: (req, _res, buf) => {
+      <span class="keyword">if</span> (buf && buf.length) {
+        (req <span class="keyword">as any</span>).rawBody = buf;
+      }
+    },
+  }),
+);</code></pre>
+
+  <h3>2. Webhook Signature Verification</h3>
+  <p>
+    Razorpay provides the <code>X-Razorpay-Signature</code> header. CraftyWrap validates it with:
+  </p>
+  <pre><code><span class="keyword">export function</span> <span class="fn">verifyWebhookSignature</span>(rawBody: Buffer | string, signature: string): boolean {
+  <span class="keyword">const</span> secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  <span class="keyword">const</span> expectedSignature = crypto.<span class="fn">createHmac</span>(<span class="str">'sha256'</span>, secret).<span class="fn">update</span>(rawBody).<span class="fn">digest</span>(<span class="str">'hex'</span>);
+  <span class="keyword">return</span> crypto.<span class="fn">timingSafeEqual</span>(Buffer.<span class="fn">from</span>(expectedSignature), Buffer.<span class="fn">from</span>(signature));
+}</code></pre>
+
+  <h3>3. Strict Webhook Idempotency</h3>
+  <p>
+    Razorpay enforces an at-least-once delivery guarantee. If CraftyWrap's response takes longer than 5 seconds or encounters transient gateway network blips, Razorpay retries the webhook up to multiple times. Without an idempotency layer, stock could be decremented twice and promo counts corrupted.
+  </p>
+  <p>
+    CraftyWrap implements a persistent log backed by the <code>WebhookEvent</code> model (<code>backend/src/models/WebhookEvent.ts</code>):
+  </p>
+  <pre><code><span class="comment">// Query indexed unique eventId before triggering any business logic</span>
+<span class="keyword">const</span> alreadyProcessed = <span class="keyword">await</span> <span class="fn">isEventProcessed</span>(eventId);
+<span class="keyword">if</span> (alreadyProcessed) {
+  <span class="keyword">return</span> { status: <span class="str">'already_processed'</span>, message: <span class="str">'Event already processed.'</span> };
+}</code></pre>
+
+  <h3>4. Amount Mismatch & Underpayment Guard</h3>
+  <p>
+    A critical attack vector in e-commerce is the "underpayment exploit," where a modified client attempts to satisfy a ₹10,000 order by paying ₹1.00 on a tampered Razorpay order. CraftyWrap's webhook engine performs an explicit mathematical sanity check:
+  </p>
+  <pre><code><span class="keyword">const</span> expectedPaise = Math.<span class="fn">round</span>(order.total * <span class="num">100</span>);
+<span class="keyword">if</span> (amountInPaise !== undefined && amountInPaise !== expectedPaise) {
+  order.paymentDetails.failureReason = <span class="str">`Webhook amount mismatch: expected ${expectedPaise}, received ${amountInPaise}`</span>;
+  <span class="keyword">await</span> order.<span class="fn">save</span>();
+  <span class="keyword">return</span> { status: <span class="str">'failed'</span>, message: <span class="str">'Payment amount mismatch.'</span> };
+}</code></pre>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 7 -->
+  <h2><span class="section-num">07</span> State Consistency & MongoDB ACID Transactions</h2>
+  <p>
+    When payments are confirmed (either via synchronous verification or webhook), inventory, promotions, orders, and carts must transition simultaneously or not at all. CraftyWrap executes this inside a <strong>Mongoose Session Transaction</strong>:
+  </p>
+
+  <div class="no-break">
+    <pre><code><span class="keyword">const</span> session = <span class="keyword">await</span> mongoose.<span class="fn">startSession</span>();
+<span class="keyword">try</span> {
+  <span class="keyword">await</span> session.<span class="fn">withTransaction</span>(<span class="keyword">async</span> () => {
+    <span class="keyword">const</span> currentOrder = <span class="keyword">await</span> Order.<span class="fn">findById</span>(order._id).<span class="fn">session</span>(session);
+    <span class="keyword">const</span> isFirstPaymentVerification = currentOrder.paymentStatus !== <span class="str">'paid'</span>;
+
+    <span class="keyword">if</span> (isFirstPaymentVerification) {
+      <span class="comment">// Atomic stock decrement with condition guard</span>
+      <span class="keyword">for</span> (<span class="keyword">const</span> item <span class="keyword">of</span> currentOrder.items) {
+        <span class="keyword">await</span> Product.<span class="fn">findOneAndUpdate</span>(
+          { _id: item.product, stockCount: { $gte: item.quantity } },
+          { $inc: { stockCount: -item.quantity } },
+          { new: <span class="keyword">true</span>, session }
+        );
+      }
+      <span class="comment">// Increment promo usage count</span>
+      <span class="keyword">if</span> (currentOrder.promoCodeApplied) {
+        <span class="keyword">await</span> PromoCode.<span class="fn">updateOne</span>(
+          { code: currentOrder.promoCodeApplied },
+          { $inc: { usedCount: <span class="num">1</span> } },
+          { session }
+        );
+      }
+    }
+
+    <span class="comment">// Update order state</span>
+    currentOrder.paymentStatus = <span class="str">'paid'</span>;
+    currentOrder.orderStatus = <span class="str">'preparing'</span>;
+    currentOrder.paymentDetails.paidAt = <span class="keyword">new</span> <span class="fn">Date</span>();
+    <span class="keyword">await</span> currentOrder.<span class="fn">save</span>({ session });
+
+    <span class="comment">// Invalidate active cart</span>
+    <span class="keyword">await</span> Cart.<span class="fn">updateOne</span>(cartFilter, { $set: { items: [] } }, { session });
+  });
+} <span class="keyword">finally</span> {
+  <span class="keyword">await</span> session.<span class="fn">endSession</span>();
+}</code></pre>
+  </div>
+
+  <!-- SECTION 8 -->
+  <h2><span class="section-num">08</span> Lifecycle State Machine Matrix</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Phase / Event</th>
+        <th>Payment Status</th>
+        <th>Order Status</th>
+        <th>Stock Count</th>
+        <th>Cart Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Order Created</strong></td>
+        <td><code>pending_verification</code></td>
+        <td><code>payment_pending</code></td>
+        <td>Unchanged</td>
+        <td>Retained</td>
+      </tr>
+      <tr>
+        <td><strong>2. Payment Authorized (Client Verify)</strong></td>
+        <td><code>paid</code></td>
+        <td><code>preparing</code></td>
+        <td>Decremented (&minus;Qty)</td>
+        <td>Purged (Cleared)</td>
+      </tr>
+      <tr>
+        <td><strong>3. Webhook (payment.captured)</strong></td>
+        <td><code>paid</code></td>
+        <td><code>preparing</code></td>
+        <td>Guaranteed Decremented</td>
+        <td>Guaranteed Purged</td>
+      </tr>
+      <tr>
+        <td><strong>4. Webhook (payment.failed)</strong></td>
+        <td><code>failed</code></td>
+        <td><code>payment_pending</code></td>
+        <td>Unchanged</td>
+        <td>Retained for Retry</td>
+      </tr>
+      <tr>
+        <td><strong>5. Order Shipped (Admin)</strong></td>
+        <td><code>paid</code></td>
+        <td><code>shipped</code></td>
+        <td>Unchanged</td>
+        <td>N/A</td>
+      </tr>
+      <tr>
+        <td><strong>6. Order Delivered</strong></td>
+        <td><code>paid</code></td>
+        <td><code>delivered</code></td>
+        <td>Unchanged</td>
+        <td>N/A</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 9 -->
+  <h2><span class="section-num">09</span> Failure Modes & Mitigation Table</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Failure Scenario</th>
+        <th>Potential Risk</th>
+        <th>CraftyWrap Architectural Solution</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Client closes browser before callback</strong></td>
+        <td>User is charged, but order remains stuck in <code>payment_pending</code></td>
+        <td><strong>Asynchronous Webhook:</strong> Razorpay delivers <code>payment.captured</code> server-to-server. Webhook independently confirms payment and triggers crafter preparation.</td>
+      </tr>
+      <tr>
+        <td><strong>Network drops during webhook delivery</strong></td>
+        <td>Razorpay receives timeout, order not confirmed</td>
+        <td><strong>Retry Engine + Idempotency:</strong> Razorpay retries webhook with exponential backoff. <code>WebhookEvent</code> table prevents double processing on receipt.</td>
+      </tr>
+      <tr>
+        <td><strong>Concurrent client verify & webhook hit</strong></td>
+        <td>Stock decremented twice; promo count incremented twice</td>
+        <td><strong>Condition Guard & Session Lock:</strong> <code>isFirstPaymentVerification = (status !== 'paid')</code> within an isolated MongoDB ACID session guarantees singular execution.</td>
+      </tr>
+      <tr>
+        <td><strong>Tampered webhook payload</strong></td>
+        <td>Attacker fakes paid event to get free items</td>
+        <td><strong>Raw Body HMAC-SHA256:</strong> Computed using <code>req.rawBody</code> and <code>timingSafeEqual</code> against secret. Unauthenticated payloads return 400 Bad Request immediately.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="doc-footer">
+    <div><strong>CraftyWrap E-Commerce Platform</strong> &bull; Technical Architecture Documentation</div>
+    <div>Generated: September 2026 &bull; Production Ready</div>
+  </div>
+
+</body>
+</html>

@@ -154,7 +154,7 @@ export default function HomePage() {
                 href="/collections"
                 variant="outline"
                 text="Shop All Collections"
-                className="w-full sm:w-auto min-w-[220px] py-3.5 px-8 text-sm font-extrabold bg-white dark:bg-[#FFF9F4] text-warmbrown-900 dark:text-[#3D2412] border-peach-200/80 dark:border-white/90 shadow-md hover:shadow-xl"
+                className="w-full sm:w-auto min-w-[220px] py-3.5 px-8 text-sm font-extrabold !bg-white dark:!bg-white text-warmbrown-800 dark:text-warmbrown-800 !border-white dark:!border-white shadow-md hover:shadow-xl"
               />
               <FlowButton
                 href="/custom-order"
