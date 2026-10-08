@@ -12,6 +12,8 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertCircle,
+  Sparkles,
+  MapPin,
 } from 'lucide-react';
 
 const loadRazorpayScript = (): Promise<boolean> => {
@@ -81,12 +83,52 @@ export default function CheckoutPage() {
     }
   };
 
-  // Address form fields
-  const [fullName, setFullName] = useState(user.name || 'Maya Lin');
-  const [phone, setPhone] = useState(user.phone || '+91 98765 43210');
-  const [address, setAddress] = useState('42 Yarn Street, Crafty Town');
-  const [city, setCity] = useState('Bangalore');
-  const [pincode, setPincode] = useState('560001');
+  // Address form fields with account auto-fill
+  const defaultSavedAddress = React.useMemo(() => {
+    if (!user.addresses || user.addresses.length === 0) return null;
+    return user.addresses.find((addr) => addr.isDefault) || user.addresses[0];
+  }, [user.addresses]);
+
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | 'custom'>(0);
+  const [fullName, setFullName] = useState(defaultSavedAddress?.fullName || user.name || '');
+  const [phone, setPhone] = useState(defaultSavedAddress?.phone || user.phone || '');
+  const [address, setAddress] = useState(defaultSavedAddress?.address || '');
+  const [city, setCity] = useState(defaultSavedAddress?.city || '');
+  const [state, setState] = useState(defaultSavedAddress?.state || 'Karnataka');
+  const [pincode, setPincode] = useState(defaultSavedAddress?.pincode || '');
+  const [isAutoFilled, setIsAutoFilled] = useState(Boolean(defaultSavedAddress));
+
+  // Auto-fill and synchronize whenever the user or their saved addresses load
+  React.useEffect(() => {
+    if (user.addresses && user.addresses.length > 0) {
+      const activeAddr = user.addresses.find((addr) => addr.isDefault) || user.addresses[0];
+      setFullName(activeAddr.fullName || user.name || '');
+      setPhone(activeAddr.phone || user.phone || '');
+      setAddress(activeAddr.address || '');
+      setCity(activeAddr.city || '');
+      setState(activeAddr.state || 'Karnataka');
+      setPincode(activeAddr.pincode || '');
+      setIsAutoFilled(true);
+      const idx = user.addresses.findIndex((addr) => addr === activeAddr);
+      setSelectedAddressIndex(idx >= 0 ? idx : 0);
+    } else if (user.isLoggedIn) {
+      if (user.name) setFullName((prev) => prev || user.name || '');
+      if (user.phone) setPhone((prev) => prev || user.phone || '');
+    }
+  }, [user]);
+
+  const handleSelectSavedAddress = (index: number) => {
+    const selected = user.addresses[index];
+    if (!selected) return;
+    setSelectedAddressIndex(index);
+    setFullName(selected.fullName || user.name || '');
+    setPhone(selected.phone || user.phone || '');
+    setAddress(selected.address);
+    setCity(selected.city);
+    setState(selected.state || 'Karnataka');
+    setPincode(selected.pincode);
+    setIsAutoFilled(true);
+  };
 
   const safeSubtotal = Number.isNaN(Number(subtotal)) ? 0 : Number(subtotal);
   const giftWrapFee = giftWrap ? 49 : 0;
@@ -116,7 +158,7 @@ export default function CheckoutPage() {
             phone,
             address,
             city,
-            state: 'Karnataka',
+            state: state.trim() || 'Karnataka',
             pincode,
           },
           paymentMethod: 'razorpay',
@@ -156,6 +198,7 @@ export default function CheckoutPage() {
           prefill: {
             name: fullName,
             phone: phone,
+            email: user.email || undefined,
           },
           theme: {
             color: '#5C3A21',
@@ -193,6 +236,7 @@ export default function CheckoutPage() {
           prefill: {
             name: fullName,
             phone: phone,
+            email: user.email || undefined,
           },
           theme: {
             color: '#5C3A21',
@@ -307,10 +351,58 @@ export default function CheckoutPage() {
         <div className="lg:col-span-7 space-y-6">
           {/* Shipping Address Section */}
           <div className="bg-white dark:bg-[#1F1610] p-6 sm:p-8 rounded-3xl border border-peach-200/80 dark:border-warmbrown-900/80 shadow-soft space-y-4">
-            <h3 className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg flex items-center gap-2 border-b border-peach-100 dark:border-warmbrown-900 pb-3">
-              <Truck size={20} className="text-warmbrown-600 dark:text-peach-300" />
-              1. Shipping Address
-            </h3>
+            <div className="flex items-center justify-between border-b border-peach-100 dark:border-warmbrown-900 pb-3">
+              <h3 className="font-extrabold text-warmbrown-800 dark:text-peach-100 text-lg flex items-center gap-2">
+                <Truck size={20} className="text-warmbrown-600 dark:text-peach-300" />
+                1. Shipping Address
+              </h3>
+              {isAutoFilled && (
+                <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800 shadow-2xs">
+                  <Sparkles size={11} className="text-emerald-600 dark:text-emerald-400" />
+                  Auto-filled from Account
+                </span>
+              )}
+            </div>
+
+            {/* Saved Address Quick Selector (when user has saved addresses) */}
+            {user.addresses && user.addresses.length > 0 && (
+              <div className="space-y-2 pb-2">
+                <label className="text-[11px] font-extrabold text-warmbrown-700 dark:text-peach-200 flex items-center gap-1.5 uppercase tracking-wider">
+                  <MapPin size={13} className="text-warmbrown-600 dark:text-peach-300" />
+                  Your Saved Delivery Addresses
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {user.addresses.map((addr, idx) => {
+                    const isSelected = selectedAddressIndex === idx;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectSavedAddress(idx)}
+                        className={`p-3 rounded-2xl text-left border transition-all text-xs relative ${
+                          isSelected
+                            ? 'bg-peach-100/70 dark:bg-warmbrown-900 border-warmbrown-800 dark:border-peach-300 ring-2 ring-warmbrown-700 dark:ring-peach-300 shadow-xs'
+                            : 'bg-peach-50/40 dark:bg-warmbrown-950/60 border-peach-200 dark:border-warmbrown-800 hover:border-warmbrown-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-extrabold text-warmbrown-900 dark:text-peach-100">
+                            {addr.label === 'Work' ? '🏢 Work' : addr.label === 'Home' ? '🏠 Home' : `📍 ${addr.label || 'Saved'}`}
+                          </span>
+                          {addr.isDefault && (
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-200">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-semibold text-warmbrown-800 dark:text-peach-200 truncate">{addr.fullName} ({addr.phone})</p>
+                        <p className="text-warmbrown-600 dark:text-peach-300/80 truncate text-[11px]">{addr.address}, {addr.city}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -319,7 +411,10 @@ export default function CheckoutPage() {
                   type="text"
                   required
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    setSelectedAddressIndex('custom');
+                  }}
                   className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>
@@ -330,7 +425,10 @@ export default function CheckoutPage() {
                   type="text"
                   required
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setSelectedAddressIndex('custom');
+                  }}
                   className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>
@@ -342,30 +440,53 @@ export default function CheckoutPage() {
                 type="text"
                 required
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  setSelectedAddressIndex('custom');
+                }}
                 className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">City *</label>
                 <input
                   type="text"
                   required
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    setSelectedAddressIndex('custom');
+                  }}
                   className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">Pincode / Postal Code *</label>
+                <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">State / Region *</label>
+                <input
+                  type="text"
+                  required
+                  value={state}
+                  onChange={(e) => {
+                    setState(e.target.value);
+                    setSelectedAddressIndex('custom');
+                  }}
+                  className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-warmbrown-700 dark:text-peach-200 block mb-1">Pincode *</label>
                 <input
                   type="text"
                   required
                   value={pincode}
-                  onChange={(e) => setPincode(e.target.value)}
+                  onChange={(e) => {
+                    setPincode(e.target.value);
+                    setSelectedAddressIndex('custom');
+                  }}
                   className="w-full bg-peach-50 dark:bg-warmbrown-900/90 border border-peach-200 dark:border-warmbrown-800 text-warmbrown-900 dark:text-peach-100 placeholder-warmbrown-400 dark:placeholder-warmbrown-400 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-warmbrown-600 dark:focus:border-peach-300"
                 />
               </div>

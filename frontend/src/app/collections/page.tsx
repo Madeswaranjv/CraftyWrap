@@ -221,7 +221,18 @@ function CollectionsContent() {
 
         if (controller.signal.aborted) return;
 
-        setProducts(response.products.map((item) => toCatalogProduct(item as unknown as Parameters<typeof toCatalogProduct>[0])));
+        const rawProducts = response.products.map((item) =>
+          toCatalogProduct(item as unknown as Parameters<typeof toCatalogProduct>[0])
+        );
+        const seenIds = new Set<string>();
+        const uniqueProducts = rawProducts.filter((product) => {
+          const key = product.id || product.slug;
+          if (!key || seenIds.has(key)) return false;
+          seenIds.add(key);
+          return true;
+        });
+
+        setProducts(uniqueProducts);
         setPagination(response.pagination);
         setHasInitialFetched(true);
       } catch (error) {

@@ -5,6 +5,7 @@ node_modules/
 frontend/.next/
 frontend/out/
 backend/dist/
+*.tsbuildinfo
 
 # Environment files and local secrets
 .env

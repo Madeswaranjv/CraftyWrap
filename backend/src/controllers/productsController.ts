@@ -136,12 +136,12 @@ export const listProducts: RequestHandler = asyncHandler(async (req, res) => {
 
   const sortBy = typeof req.query.sort === 'string' ? req.query.sort : 'featured';
   const sort = ({
-    featured: { isBestSeller: -1, rating: -1, reviewCount: -1, createdAt: -1 },
-    'price-low': { price: 1, createdAt: -1 },
-    'price-high': { price: -1, createdAt: -1 },
-    rating: { rating: -1, reviewCount: -1 },
-    newest: { createdAt: -1 },
-  }[sortBy] ?? { isBestSeller: -1, rating: -1, reviewCount: -1 }) as Record<string, SortOrder>;
+    featured: { isBestSeller: -1, rating: -1, reviewCount: -1, createdAt: -1, _id: -1 },
+    'price-low': { price: 1, createdAt: -1, _id: -1 },
+    'price-high': { price: -1, createdAt: -1, _id: -1 },
+    rating: { rating: -1, reviewCount: -1, _id: -1 },
+    newest: { createdAt: -1, _id: -1 },
+  }[sortBy] ?? { isBestSeller: -1, rating: -1, reviewCount: -1, _id: -1 }) as Record<string, SortOrder>;
 
   const [products, total, productTypeCounts, designThemeCounts, yarnTypeCounts, sizeCounts] = await Promise.all([
     Product.find(filter).sort(sort).skip((page - 1) * limit).limit(limit),
@@ -168,7 +168,7 @@ export const getRelatedProducts: RequestHandler = asyncHandler(async (req, res) 
   const product = await Product.findOne({ slug: req.params.slug, isActive: true });
   if (!product) throw new HttpError(404, 'Product not found.');
   const products = await Product.find({ _id: { $ne: product._id }, isActive: true, designTheme: product.designTheme })
-    .sort({ isBestSeller: -1, rating: -1 })
+    .sort({ isBestSeller: -1, rating: -1, _id: -1 })
     .limit(4);
   sendSuccess(res, 200, 'Related products retrieved.', products.map((item) => serializeProduct(item)));
 });
@@ -182,6 +182,7 @@ export const autocompleteProducts: RequestHandler = asyncHandler(async (req, res
   const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const products = await Product.find({ isActive: true, $or: [{ name: { $regex: escaped, $options: 'i' } }, { slug: { $regex: escaped, $options: 'i' } }, { productType: { $regex: escaped, $options: 'i' } }, { designTheme: { $regex: escaped, $options: 'i' } }] })
     .select('slug name productType designTheme images price')
+    .sort({ isBestSeller: -1, rating: -1, _id: -1 })
     .limit(8);
   sendSuccess(res, 200, 'Autocomplete results retrieved.', products.map((product) => serializeProduct(product)));
 });

@@ -18,6 +18,16 @@ export interface Address {
   isDefault?: boolean;
 }
 
+export interface RegisterAddressInput {
+  label?: string;
+  fullName?: string;
+  phone?: string;
+  address: string;
+  city: string;
+  state?: string;
+  pincode: string;
+}
+
 export interface CartItem {
   product: CatalogProduct;
   quantity: number;
@@ -87,7 +97,7 @@ interface CartContextType {
   user: UserProfile;
   authLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone?: string, address?: RegisterAddressInput) => Promise<void>;
   loginWithGoogle: (credential?: string) => Promise<void>;
   updateProfile: (profile: Partial<Pick<UserProfile, 'name' | 'phone' | 'avatarUrl' | 'addresses'>>) => Promise<void>;
   logout: () => void;
@@ -242,10 +252,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showNotification('Signed in successfully.');
   }, [completeAuthentication, showNotification]);
 
-  const register = useCallback(async (name: string, email: string, password: string, phone?: string) => {
+  const register = useCallback(async (
+    name: string,
+    email: string,
+    password: string,
+    phone?: string,
+    address?: RegisterAddressInput,
+  ) => {
     const auth = await apiRequest<AuthResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ name, email, password, phone, cartToken: getOrCreateCartToken() }),
+      body: JSON.stringify({ name, email, password, phone, address, cartToken: getOrCreateCartToken() }),
     });
     await completeAuthentication(auth);
     showNotification('Your CraftyWrap account is ready.');

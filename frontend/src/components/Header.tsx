@@ -561,6 +561,20 @@ export const Header: React.FC = () => {
               <User size={16} />
               {user.isLoggedIn ? `Account (${user.name})` : 'Sign In'}
             </Link>
+            {user.isLoggedIn && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  logout();
+                  router.push('/');
+                }}
+                className="px-3 py-2 rounded-xl hover:bg-rose-50 text-rose-700 font-semibold flex items-center gap-2 text-left"
+              >
+                <LogOut size={16} />
+                Sign Out
+              </button>
+            )}
           </nav>
         </div>
       )}

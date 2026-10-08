@@ -87,8 +87,23 @@ export default function ProductDetailPage() {
           apiRequest<ProductReview[]>(`/reviews/product/${encodeURIComponent(productId)}`),
         ]);
         if (!isCurrent) return;
-        setProduct(toCatalogProduct(productData));
-        setRelatedProducts(relatedData.map(toCatalogProduct));
+        const catalogProduct = toCatalogProduct(productData);
+        setProduct(catalogProduct);
+
+        const seenRelated = new Set<string>([
+          productId,
+          catalogProduct.id,
+          catalogProduct.slug,
+        ].filter(Boolean) as string[]);
+
+        const uniqueRelated = relatedData.map(toCatalogProduct).filter((p) => {
+          const key = p.id || p.slug;
+          if (!key || seenRelated.has(key)) return false;
+          seenRelated.add(key);
+          return true;
+        });
+
+        setRelatedProducts(uniqueRelated);
         setReviewsList(reviewsData);
       } catch (error) {
         if (isCurrent) setFormError(error instanceof Error ? error.message : 'Unable to load this product.');

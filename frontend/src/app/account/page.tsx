@@ -54,12 +54,13 @@ export default function AccountPage() {
   const [newCity, setNewCity] = useState('');
   const [newState, setNewState] = useState('');
   const [newPincode, setNewPincode] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user.isLoggedIn) {
+    if (!authLoading && !user.isLoggedIn && !isLoggingOut) {
       router.push('/login');
     }
-  }, [authLoading, user.isLoggedIn, router]);
+  }, [authLoading, user.isLoggedIn, router, isLoggingOut]);
 
   useEffect(() => {
     if (user.isLoggedIn) {
@@ -168,8 +169,9 @@ export default function AccountPage() {
 
             <button
               onClick={() => {
+                setIsLoggingOut(true);
                 logout();
-                router.push('/');
+                router.replace('/');
               }}
               className="p-2.5 text-warmbrown-500 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors border border-peach-200"
               title="Sign Out"

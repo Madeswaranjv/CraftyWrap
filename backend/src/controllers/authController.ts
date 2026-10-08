@@ -9,12 +9,24 @@ import { HttpError } from '../utils/HttpError';
 import { sendSuccess } from '../utils/apiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
 
+const addressInputSchema = z.object({
+  label: z.string().trim().max(50).optional(),
+  fullName: z.string().trim().min(2).max(120).optional(),
+  phone: z.string().trim().min(6).max(25).optional(),
+  address: z.string().trim().min(5, 'Delivery address must be at least 5 characters.').max(300),
+  city: z.string().trim().min(2, 'City must be at least 2 characters.').max(100),
+  state: z.string().trim().min(2).max(100).optional(),
+  pincode: z.string().trim().min(3, 'Pincode must be at least 3 characters.').max(20),
+  isDefault: z.boolean().optional(),
+});
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters long.').max(120),
   email: z.string().trim().email('Please enter a valid email address.'),
   password: z.string().min(8, 'Password must be at least 8 characters long.').max(128),
   phone: z.string().trim().min(6, 'Phone number must be at least 6 characters.').max(25).optional().or(z.literal('')),
   cartToken: z.string().min(16).max(200).optional(),
+  address: addressInputSchema.optional(),
 });
 export const loginSchema = z.object({
   email: z.string().trim().email('Please enter a valid email address.'),
@@ -59,11 +71,25 @@ async function completeLogin(res: Response, user: Parameters<typeof serializeAut
 }
 
 export const register: RequestHandler = asyncHandler(async (req, res) => {
-  const { name, email, password, phone, cartToken } = req.body;
+  const { name, email, password, phone, cartToken, address } = req.body;
   const normalizedEmail = email.toLowerCase().trim();
   const existingUser = await User.findOne({ email: normalizedEmail });
   if (existingUser) {
     throw new HttpError(409, 'This email is already registered.');
+  }
+
+  const addresses = [];
+  if (address && address.address && address.city && address.pincode) {
+    addresses.push({
+      label: address.label?.trim() || 'Home',
+      fullName: address.fullName?.trim() || name.trim(),
+      phone: address.phone?.trim() || (phone ? phone.trim() : ''),
+      address: address.address.trim(),
+      city: address.city.trim(),
+      state: address.state?.trim() || 'Karnataka',
+      pincode: address.pincode.trim(),
+      isDefault: true,
+    });
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -73,6 +99,7 @@ export const register: RequestHandler = asyncHandler(async (req, res) => {
     phone: phone ? phone.trim() : undefined,
     passwordHash,
     role: 'customer',
+    addresses,
   });
   if (!user) throw new HttpError(500, 'Unable to create account.');
   sendSuccess(res, 201, 'Welcome to CraftyWrap!', await completeLogin(res, user, cartToken));

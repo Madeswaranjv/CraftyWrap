@@ -14,6 +14,9 @@ import {
   X,
   User,
   Phone,
+  MapPin,
+  Home,
+  Compass,
 } from 'lucide-react';
 import { FlowButton } from '@/components/ui/flow-button';
 
@@ -28,6 +31,14 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Address Information
+  const [addressLabel, setAddressLabel] = useState<'Home' | 'Work' | 'Other'>('Home');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('Karnataka');
+  const [pincode, setPincode] = useState('');
+
   const [agreed, setAgreed] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
@@ -39,6 +50,10 @@ export default function SignUpPage() {
     const trimmedName = fullName.trim();
     const trimmedEmail = email.trim();
     const trimmedPhone = phone.trim();
+    const trimmedAddress = address.trim();
+    const trimmedCity = city.trim();
+    const trimmedState = state.trim();
+    const trimmedPincode = pincode.trim();
 
     if (!trimmedName || trimmedName.length < 2) {
       setErrorMsg('Full Name must be at least 2 characters long.');
@@ -71,6 +86,21 @@ export default function SignUpPage() {
       return;
     }
 
+    if (!trimmedAddress || trimmedAddress.length < 5) {
+      setErrorMsg('Please enter your delivery street address (at least 5 characters).');
+      return;
+    }
+
+    if (!trimmedCity || trimmedCity.length < 2) {
+      setErrorMsg('Please enter your city.');
+      return;
+    }
+
+    if (!trimmedPincode || trimmedPincode.length < 3) {
+      setErrorMsg('Please enter a valid pincode/postal code.');
+      return;
+    }
+
     if (!agreed) {
       setErrorMsg('You must agree to the Terms of Service and Privacy Policy.');
       return;
@@ -78,7 +108,15 @@ export default function SignUpPage() {
 
     setIsSigningUp(true);
     try {
-      await register(trimmedName, trimmedEmail, password, trimmedPhone || undefined);
+      await register(trimmedName, trimmedEmail, password, trimmedPhone || undefined, {
+        label: addressLabel,
+        fullName: trimmedName,
+        phone: trimmedPhone || undefined,
+        address: trimmedAddress,
+        city: trimmedCity,
+        state: trimmedState || 'Karnataka',
+        pincode: trimmedPincode,
+      });
       router.push('/');
     } catch (error) {
       setErrorMsg(error instanceof Error ? error.message : 'Registration failed. Please try again.');
@@ -105,20 +143,20 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-[85vh] bg-gradient-to-br from-peach-100/60 via-peach-50/40 to-warmbrown-100/30 flex items-center justify-center p-4 sm:p-8">
+    <div className="min-h-[85vh] bg-gradient-to-br from-peach-100/60 via-peach-50/40 to-warmbrown-100/30 flex items-center justify-center p-3 sm:p-6 my-4">
       {/* Main Sign-Up Modal Card */}
-      <div className="bg-white rounded-3xl border border-peach-200/90 shadow-2xl overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 relative p-4 sm:p-6 gap-6">
+      <div className="bg-white rounded-3xl border border-peach-200/90 shadow-2xl overflow-hidden max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 relative p-4 sm:p-6 gap-6">
         {/* Top-Right Close Button */}
         <Link
           href="/"
-          className="absolute top-6 right-6 z-20 text-warmbrown-400 hover:text-warmbrown-800 p-2 rounded-full hover:bg-peach-100/70 transition-all duration-300 group"
+          className="absolute top-5 right-5 z-20 text-warmbrown-400 hover:text-warmbrown-800 p-2 rounded-full hover:bg-peach-100/70 transition-all duration-300 group"
           title="Close"
         >
           <X size={20} className="transition-transform duration-500 group-hover:rotate-180" />
         </Link>
 
         {/* Left Column: Illustration & Brand Banner */}
-        <div className="md:col-span-6 bg-gradient-to-br from-peach-100 via-peach-50 to-warmbrown-100/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden min-h-[380px]">
+        <div className="md:col-span-5 bg-gradient-to-br from-peach-100 via-peach-50 to-warmbrown-100/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden min-h-[380px]">
           {/* Brand Logo Header */}
           <div className="z-10 flex items-center gap-2">
             <span className="font-extrabold text-xl tracking-tight text-warmbrown-800">
@@ -128,7 +166,7 @@ export default function SignUpPage() {
 
           {/* Illustration */}
           <div className="relative z-10 flex flex-col items-center justify-center my-auto pt-4">
-            <div className="relative w-64 h-64 sm:w-72 sm:h-72">
+            <div className="relative w-56 h-56 sm:w-64 sm:h-64">
               <Image
                 src="/signup-illustration.png"
                 alt="Create your CraftyWrap account"
@@ -137,22 +175,25 @@ export default function SignUpPage() {
                 priority
               />
             </div>
-            <div className="text-center pt-3">
+            <div className="text-center pt-3 space-y-1">
               <span className="inline-block bg-white/90 backdrop-blur-md text-warmbrown-800 text-xs font-extrabold px-3.5 py-1.5 rounded-full border border-peach-200 shadow-xs">
                 Join the CraftyWrap Family! ✨
               </span>
+              <p className="text-[11px] text-warmbrown-600 font-medium">
+                Save delivery addresses once, enjoy effortless 1-click checkout forever.
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Sign-Up Form */}
-        <div className="md:col-span-6 flex flex-col justify-center p-2 sm:p-6 space-y-5">
-          <div className="text-center space-y-1">
+        {/* Right Column: Sign-Up Form with Address Details */}
+        <div className="md:col-span-7 flex flex-col justify-start p-1 sm:p-4 space-y-4 max-h-[85vh] overflow-y-auto pr-1">
+          <div className="text-left space-y-1">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-warmbrown-800">
               Create Account
             </h1>
             <p className="text-xs text-warmbrown-600 font-medium">
-              Sign up to order handmade gifts & track your shipments
+              Register with your delivery details to auto-fill payment & shipping
             </p>
           </div>
 
@@ -170,34 +211,55 @@ export default function SignUpPage() {
           )}
 
           <form onSubmit={handleSignUpSubmit} className="space-y-3.5">
-            {/* Full Name Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-warmbrown-800 block">
-                Full Name
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-warmbrown-500">
-                  <User size={16} />
+            {/* Full Name & Phone in 2-cols */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warmbrown-800 block">
+                  Full Name *
+                </label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3.5 text-warmbrown-500">
+                    <User size={15} />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Your full name"
+                    className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-9 pr-3 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  />
                 </div>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Your full name"
-                  className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-10 pr-4 py-2.5 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
-                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warmbrown-800 block">
+                  Phone Number *
+                </label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3.5 text-warmbrown-500">
+                    <Phone size={15} />
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-9 pr-3 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Email Input */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-bold text-warmbrown-800 block">
-                Email
+                Email Address *
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 text-warmbrown-500">
-                  <Mail size={16} />
+                  <Mail size={15} />
                 </div>
                 <input
                   type="email"
@@ -205,81 +267,167 @@ export default function SignUpPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-10 pr-4 py-2.5 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-9 pr-3 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
                 />
               </div>
             </div>
 
-            {/* Phone Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-warmbrown-800 block">
-                Phone Number
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-warmbrown-500">
-                  <Phone size={16} />
+            {/* Delivery Address Information Card */}
+            <div className="bg-peach-50/70 p-3.5 sm:p-4 rounded-2xl border border-peach-200/90 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-extrabold text-warmbrown-900">
+                  <MapPin size={15} className="text-warmbrown-700" />
+                  <span>Delivery Address Information</span>
                 </div>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
-                  className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-10 pr-4 py-2.5 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
-                />
+                <span className="text-[10px] bg-white text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300 shadow-2xs">
+                  ✨ Auto-fills Checkout
+                </span>
+              </div>
+
+              {/* Address Tag Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-warmbrown-600">Type:</span>
+                {(['Home', 'Work', 'Other'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setAddressLabel(type)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+                      addressLabel === type
+                        ? 'bg-warmbrown-800 text-white border-warmbrown-800 shadow-2xs'
+                        : 'bg-white text-warmbrown-700 border-peach-200 hover:border-warmbrown-400'
+                    }`}
+                  >
+                    {type === 'Home' ? '🏠 Home' : type === 'Work' ? '🏢 Work' : '📍 Other'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Street Address */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-warmbrown-800 block">
+                  Street Address / Flat / Building *
+                </label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3 text-warmbrown-500">
+                    <Home size={14} />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="e.g. 42 Handloom Street, Green Valley Apt 3B"
+                    className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-9 pr-3 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  />
+                </div>
+              </div>
+
+              {/* City & Pincode 2-cols */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-warmbrown-800 block">
+                    City *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="e.g. Bangalore"
+                    className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl px-3 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-warmbrown-800 block">
+                    Pincode / Postal Code *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                    placeholder="e.g. 560001"
+                    className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl px-3 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  />
+                </div>
+              </div>
+
+              {/* State */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-warmbrown-800 block">
+                  State / Region
+                </label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3 text-warmbrown-500">
+                    <Compass size={14} />
+                  </div>
+                  <input
+                    type="text"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    placeholder="e.g. Karnataka"
+                    className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-9 pr-3 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Password Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-warmbrown-800 block">
-                Password
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-warmbrown-500">
-                  <Lock size={16} />
+            {/* Password & Confirm Password in 2-cols */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Password Input */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warmbrown-800 block">
+                  Password *
+                </label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3.5 text-warmbrown-500">
+                    <Lock size={15} />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min 8 chars (letters & numbers)"
+                    className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-9 pr-9 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 text-warmbrown-400 hover:text-warmbrown-700"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a strong password"
-                  className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-10 pr-10 py-2.5 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 text-warmbrown-400 hover:text-warmbrown-700"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
               </div>
-            </div>
 
-            {/* Confirm Password Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-warmbrown-800 block">
-                Confirm Password
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-warmbrown-500">
-                  <Lock size={16} />
+              {/* Confirm Password Input */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warmbrown-800 block">
+                  Confirm Password *
+                </label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3.5 text-warmbrown-500">
+                    <Lock size={15} />
+                  </div>
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-9 pr-9 py-2 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 text-warmbrown-400 hover:text-warmbrown-700"
+                  >
+                    {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter your password"
-                  className="w-full bg-white border border-peach-300 focus:border-warmbrown-600 rounded-xl pl-10 pr-10 py-2.5 text-xs text-warmbrown-900 font-medium placeholder-warmbrown-400 outline-none transition-all shadow-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3.5 text-warmbrown-400 hover:text-warmbrown-700"
-                >
-                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
               </div>
             </div>
 
@@ -310,8 +458,8 @@ export default function SignUpPage() {
             {/* Main Sign Up Button */}
             <FlowButton
               type="submit"
-              disabled={!agreed}
-              text="Create Account"
+              disabled={!agreed || isSigningUp}
+              text={isSigningUp ? 'Creating Account…' : 'Create Account'}
               className="w-full py-3.5 text-xs font-bold tracking-wide border-warmbrown-800/40 text-warmbrown-900 dark:text-peach-100 shadow-sm"
             />
           </form>
@@ -326,7 +474,7 @@ export default function SignUpPage() {
           </div>
 
           {/* Google OAuth Section */}
-          <div className="w-full pt-1">
+          <div className="w-full pt-0.5">
             <GoogleLoginButton
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
@@ -336,7 +484,7 @@ export default function SignUpPage() {
           </div>
 
           {/* Bottom Login Link */}
-          <div className="text-center pt-1">
+          <div className="text-center pt-0.5 pb-2">
             <p className="text-xs text-warmbrown-600 font-medium">
               Already have an account?{' '}
               <Link
