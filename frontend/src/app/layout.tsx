@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo.png',
   },
+  verification: {
+    google: 'google9e2189675e8f1fbc',
+  },
   other: {
     'p:domain_verify': 'f6536c48c264f75f8d9eed7a6840c400',
   },
